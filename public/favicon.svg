@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Five-petal cherry blossom favicon for anu's island. -->
+  <g fill="#F0506E" transform="translate(32 32)">
+    <ellipse rx="9" ry="15" cy="-14"/>
+    <ellipse rx="9" ry="15" cy="-14" transform="rotate(72)"/>
+    <ellipse rx="9" ry="15" cy="-14" transform="rotate(144)"/>
+    <ellipse rx="9" ry="15" cy="-14" transform="rotate(216)"/>
+    <ellipse rx="9" ry="15" cy="-14" transform="rotate(288)"/>
+  </g>
+  <circle cx="32" cy="32" r="6" fill="#FFB454"/>
+</svg>

@@ -1,0 +1,35 @@
+# Gate for every PR: build, size budget, model/code contract test and the end-to-end smoke test.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Size budget
+        run: |
+          total=$(du -sk dist | cut -f1)
+          echo "dist is ${total} KB"
+          test "$total" -lt 8000
+          big=$(find dist -type f -size +1200k)
+          if [ -n "$big" ]; then echo "files over 1.2 MB: $big"; exit 1; fi
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report

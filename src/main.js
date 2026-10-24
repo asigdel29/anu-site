@@ -1,111 +1,57 @@
+// Entry point for anu's cherry blossom island: loads the scene, plays the intro,
+// and wires object clicks, modals, sound and the day/night theme.
+
 import gsap from "gsap";
-
-import { Howl } from "howler";
-
+import { Howl, Howler } from "howler";
 import * as THREE from "three";
-import { OrbitControls } from "./utils/OrbitControls.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-import smokeVertexShader from "./shaders/smoke/vertex.glsl";
-import smokeFragmentShader from "./shaders/smoke/fragment.glsl";
 import themeVertexShader from "./shaders/theme/vertex.glsl";
 import themeFragmentShader from "./shaders/theme/fragment.glsl";
+import petalVertexShader from "./shaders/petals/vertex.glsl";
+import petalFragmentShader from "./shaders/petals/fragment.glsl";
+import { findInteraction, letterNumber } from "./interactions.js";
 
-/**  -------------------------- Audio setup -------------------------- */
+/**  -------------------------- Audio -------------------------- */
 
-// Background Music
-let pianoDebounceTimer = null;
-let isMusicFaded = false;
-const MUSIC_FADE_TIME = 500;
-const PIANO_TIMEOUT = 2000;
-const BACKGROUND_MUSIC_VOLUME = 1;
-const FADED_VOLUME = 0;
+const BACKGROUND_MUSIC_VOLUME = 0.6;
 
 const backgroundMusic = new Howl({
-  src: ["/audio/music/cosmic_candy.ogg"],
+  src: ["/audio/music/island.mp3"],
   loop: true,
-  volume: 1,
+  volume: BACKGROUND_MUSIC_VOLUME,
 });
 
-const fadeOutBackgroundMusic = () => {
-  if (!isMuted && !isMusicFaded) {
-    backgroundMusic.fade(
-      backgroundMusic.volume(),
-      FADED_VOLUME,
-      MUSIC_FADE_TIME
-    );
-    isMusicFaded = true;
-  }
-};
-
-const fadeInBackgroundMusic = () => {
-  if (!isMuted && isMusicFaded) {
-    backgroundMusic.fade(
-      FADED_VOLUME,
-      BACKGROUND_MUSIC_VOLUME,
-      MUSIC_FADE_TIME
-    );
-    isMusicFaded = false;
-  }
-};
-
-// Piano
-const pianoKeyMap = {
-  C1_Key: "Key_24",
-  "C#1_Key": "Key_23",
-  D1_Key: "Key_22",
-  "D#1_Key": "Key_21",
-  E1_Key: "Key_20",
-  F1_Key: "Key_19",
-  "F#1_Key": "Key_18",
-  G1_Key: "Key_17",
-  "G#1_Key": "Key_16",
-  A1_Key: "Key_15",
-  "A#1_Key": "Key_14",
-  B1_Key: "Key_13",
-  C2_Key: "Key_12",
-  "C#2_Key": "Key_11",
-  D2_Key: "Key_10",
-  "D#2_Key": "Key_9",
-  E2_Key: "Key_8",
-  F2_Key: "Key_7",
-  "F#2_Key": "Key_6",
-  G2_Key: "Key_5",
-  "G#2_Key": "Key_4",
-  A2_Key: "Key_3",
-  "A#2_Key": "Key_2",
-  B2_Key: "Key_1",
-};
-
-const pianoSounds = {};
-
-Object.values(pianoKeyMap).forEach((soundKey) => {
-  pianoSounds[soundKey] = new Howl({
-    src: [`/audio/sfx/piano/${soundKey}.ogg`],
-    preload: true,
-    volume: 0.5,
-  });
+const clickSound = new Howl({
+  src: ["/audio/sfx/click.mp3"],
+  preload: true,
+  volume: 0.5,
 });
 
-// Button
-const buttonSounds = {
-  click: new Howl({
-    src: ["/audio/sfx/click/bubble.ogg"],
-    preload: true,
-    volume: 0.5,
-  }),
-};
+let isMuted = false;
 
-/**  -------------------------- Scene setup -------------------------- */
+/**  -------------------------- Scene -------------------------- */
+
 const canvas = document.querySelector("#experience-canvas");
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
 };
+const isMobile = window.innerWidth < 768;
+const prefersReducedMotion = window.matchMedia(
+  "(prefers-reduced-motion: reduce)"
+).matches;
+
+/** Sky colour per theme; the toggle tweens the scene background between them. */
+const SKY_COLORS = {
+  day: new THREE.Color("#A9D6F2"),
+  night: new THREE.Color("#1E1B3A"),
+};
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color("#D9CAD1");
+scene.background = SKY_COLORS.day.clone();
 
 const camera = new THREE.PerspectiveCamera(
   35,
@@ -118,181 +64,83 @@ const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
   antialias: true,
 });
-
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+// ponytail: camera numbers are tuned by eye for the blockout; retune after the final model.
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.minDistance = 5;
-controls.maxDistance = 45;
-controls.minPolarAngle = 0;
-controls.maxPolarAngle = Math.PI / 2;
-controls.minAzimuthAngle = 0;
-controls.maxAzimuthAngle = Math.PI / 2;
-
+controls.minDistance = 8;
+controls.maxDistance = 35;
+controls.minPolarAngle = 0.15 * Math.PI;
+controls.maxPolarAngle = 0.62 * Math.PI;
+controls.maxTargetRadius = 4;
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-controls.update();
-
-//Set starting camera position
-if (window.innerWidth < 768) {
-  camera.position.set(
-    29.567116827654726,
-    14.018476147584705,
-    31.37040363900147
-  );
-  controls.target.set(
-    -0.08206262548844094,
-    3.3119233527087255,
-    -0.7433922282864018
-  );
+if (isMobile) {
+  camera.position.set(24, 11, 27);
+  controls.target.set(0, 2.5, 0);
 } else {
-  camera.position.set(17.49173098423395, 9.108969527553887, 17.850992894238058);
-  controls.target.set(
-    0.4624746759408973,
-    1.9719940043010387,
-    -0.8300979125494505
-  );
+  camera.position.set(18, 7.5, 20.5);
+  controls.target.set(0, 1.6, 0);
 }
+controls.update();
 
 window.addEventListener("resize", () => {
   sizes.width = window.innerWidth;
   sizes.height = window.innerHeight;
 
-  // Update Camera
   camera.aspect = sizes.width / sizes.height;
   camera.updateProjectionMatrix();
 
-  // Update renderer
   renderer.setSize(sizes.width, sizes.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
 
-/**  -------------------------- Modal Stuff -------------------------- */
+/**  -------------------------- Modals -------------------------- */
+
 const modals = {
   work: document.querySelector(".modal.work"),
   about: document.querySelector(".modal.about"),
   contact: document.querySelector(".modal.contact"),
 };
-
 const overlay = document.querySelector(".overlay");
 
-let touchHappened = false;
-overlay.addEventListener(
-  "touchend",
-  (e) => {
-    touchHappened = true;
-    e.preventDefault();
-    const modal = document.querySelector('.modal[style*="display: block"]');
-    if (modal) hideModal(modal);
-  },
-  { passive: false }
-);
+/** True while the loading screen or a modal covers the scene, so clicks and hovers pause. */
+let sceneInputBlocked = true;
+/** The modal on screen now, or null. */
+let openModal = null;
+/** Element that had focus before a modal opened, so closing gives focus back. */
+let focusBeforeModal = null;
 
-overlay.addEventListener(
-  "click",
-  (e) => {
-    if (touchHappened) return;
-    e.preventDefault();
-    const modal = document.querySelector('.modal[style*="display: block"]');
-    if (modal) hideModal(modal);
-  },
-  { passive: false }
-);
-
-document.querySelectorAll(".modal-exit-button").forEach((button) => {
-  function handleModalExit(e) {
-    e.preventDefault();
-    const modal = e.target.closest(".modal");
-
-    gsap.to(button, {
-      scale: 5,
-      duration: 0.5,
-      ease: "back.out(2)",
-      onStart: () => {
-        gsap.to(button, {
-          scale: 1,
-          duration: 0.5,
-          ease: "back.out(2)",
-          onComplete: () => {
-            gsap.set(button, {
-              clearProps: "all",
-            });
-          },
-        });
-      },
-    });
-
-    buttonSounds.click.play();
-    hideModal(modal);
-  }
-
-  button.addEventListener(
-    "touchend",
-    (e) => {
-      touchHappened = true;
-      handleModalExit(e);
-    },
-    { passive: false }
-  );
-
-  button.addEventListener(
-    "click",
-    (e) => {
-      if (touchHappened) return;
-      handleModalExit(e);
-    },
-    { passive: false }
-  );
-});
-
-let isModalOpen = true;
-
+/** Opens a modal with a pop animation and moves keyboard focus into it. */
 const showModal = (modal) => {
+  if (openModal) return;
+  openModal = modal;
+  focusBeforeModal = document.activeElement;
+
   modal.style.display = "block";
   overlay.style.display = "block";
 
-  isModalOpen = true;
+  sceneInputBlocked = true;
   controls.enabled = false;
+  clearHover();
 
-  if (currentHoveredObject) {
-    playHoverAnimation(currentHoveredObject, false);
-    currentHoveredObject = null;
-  }
-  document.body.style.cursor = "default";
-  currentIntersects = [];
+  gsap.set(modal, { opacity: 0, scale: 0 });
+  gsap.set(overlay, { opacity: 0 });
+  gsap.to(overlay, { opacity: 1, duration: 0.5 });
+  gsap.to(modal, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" });
 
-  gsap.set(modal, {
-    opacity: 0,
-    scale: 0,
-  });
-  gsap.set(overlay, {
-    opacity: 0,
-  });
-
-  gsap.to(overlay, {
-    opacity: 1,
-    duration: 0.5,
-  });
-
-  gsap.to(modal, {
-    opacity: 1,
-    scale: 1,
-    duration: 0.5,
-    ease: "back.out(2)",
-  });
+  modal.querySelector(".modal-exit-button").focus({ preventScroll: true });
 };
 
+/** Closes the open modal and gives focus back to where it was. */
 const hideModal = (modal) => {
-  isModalOpen = false;
+  openModal = null;
+  sceneInputBlocked = false;
   controls.enabled = true;
 
-  gsap.to(overlay, {
-    opacity: 0,
-    duration: 0.5,
-  });
-
+  gsap.to(overlay, { opacity: 0, duration: 0.5 });
   gsap.to(modal, {
     opacity: 0,
     scale: 0,
@@ -303,9 +151,44 @@ const hideModal = (modal) => {
       overlay.style.display = "none";
     },
   });
+
+  focusBeforeModal?.focus?.({ preventScroll: true });
 };
 
-/**  -------------------------- Loading Screen & Intro Animation -------------------------- */
+overlay.addEventListener("click", () => {
+  if (openModal) hideModal(openModal);
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && openModal) hideModal(openModal);
+});
+
+document.querySelectorAll(".modal-exit-button").forEach((button) => {
+  button.addEventListener("click", (e) => {
+    e.preventDefault();
+    gsap.fromTo(
+      button,
+      { scale: 1.6 },
+      {
+        scale: 1,
+        duration: 0.5,
+        ease: "back.out(2)",
+        onComplete: () => gsap.set(button, { clearProps: "all" }),
+      }
+    );
+    clickSound.play();
+    hideModal(button.closest(".modal"));
+  });
+});
+
+document.querySelectorAll("[data-modal]").forEach((button) => {
+  button.addEventListener("click", () => {
+    clickSound.play();
+    showModal(modals[button.dataset.modal]);
+  });
+});
+
+/**  -------------------------- Loading screen and intro -------------------------- */
 
 const manager = new THREE.LoadingManager();
 
@@ -313,716 +196,92 @@ const loadingScreen = document.querySelector(".loading-screen");
 const loadingScreenButton = document.querySelector(".loading-screen-button");
 const noSoundButton = document.querySelector(".no-sound-button");
 
-manager.onLoad = function () {
-  loadingScreenButton.style.border = "8px solid #2a0f4e";
-  loadingScreenButton.style.background = "#401d49";
-  loadingScreenButton.style.color = "#e6dede";
-  loadingScreenButton.style.boxShadow = "rgba(0, 0, 0, 0.24) 0px 3px 8px";
-  loadingScreenButton.textContent = "Enter!";
-  loadingScreenButton.style.cursor = "pointer";
-  loadingScreenButton.style.transition =
-    "transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)";
-  let isDisabled = false;
+manager.onLoad = () => {
+  loadingScreen.classList.add("is-ready");
+  loadingScreenButton.textContent = "enter";
+  loadingScreenButton.disabled = false;
+  noSoundButton.textContent = "enter without sound";
+  noSoundButton.hidden = false;
 
-  noSoundButton.textContent = "Enter without Sound :(";
+  let hasEntered = false;
 
-  function handleEnter(withSound = true) {
-    if (isDisabled) return;
+  /** Starts the reveal once, with or without music. */
+  const handleEnter = (withSound) => {
+    if (hasEntered) return;
+    hasEntered = true;
 
-    noSoundButton.textContent = "";
-    loadingScreenButton.style.cursor = "default";
-    loadingScreenButton.style.border = "8px solid #6e5e9c";
-    loadingScreenButton.style.background = "#ead7ef";
-    loadingScreenButton.style.color = "#6e5e9c";
-    loadingScreenButton.style.boxShadow = "none";
-    loadingScreenButton.textContent = "~ 안녕하세요 ~";
-    loadingScreen.style.background = "#ead7ef";
-    isDisabled = true;
+    noSoundButton.hidden = true;
+    loadingScreenButton.textContent = "~ hey ~";
+    loadingScreen.classList.add("is-entering");
 
-    toggleFavicons();
-
-    if (!withSound) {
-      isMuted = true;
-      updateMuteState(true);
-
-      soundOnSvg.style.display = "none";
-      soundOffSvg.style.display = "block";
-    } else {
+    if (withSound) {
       backgroundMusic.play();
+    } else {
+      setMuted(true);
     }
 
     playReveal();
-  }
+  };
 
-  loadingScreenButton.addEventListener("mouseenter", () => {
-    loadingScreenButton.style.transform = "scale(1.3)";
-  });
-
-  loadingScreenButton.addEventListener("touchend", (e) => {
-    touchHappened = true;
-    e.preventDefault();
-    handleEnter();
-  });
-
-  loadingScreenButton.addEventListener("click", (e) => {
-    if (touchHappened) return;
-    handleEnter(true);
-  });
-
-  loadingScreenButton.addEventListener("mouseleave", () => {
-    loadingScreenButton.style.transform = "none";
-  });
-
-  noSoundButton.addEventListener("click", (e) => {
-    if (touchHappened) return;
-    handleEnter(false);
-  });
+  loadingScreenButton.addEventListener("click", () => handleEnter(true));
+  noSoundButton.addEventListener("click", () => handleEnter(false));
 };
 
+/** Drops the loading screen away, then starts the intro. */
 function playReveal() {
-  const tl = gsap.timeline();
+  const timeline = gsap.timeline();
 
-  tl.to(loadingScreen, {
-    scale: 0.5,
-    duration: 1.2,
-    delay: 0.25,
-    ease: "back.in(1.8)",
-  }).to(
-    loadingScreen,
-    {
-      y: "200vh",
-      transform: "perspective(1000px) rotateX(45deg) rotateY(-35deg)",
+  timeline
+    .to(loadingScreen, {
+      scale: 0.5,
       duration: 1.2,
-      ease: "back.in(1.8)",
-      onComplete: () => {
-        isModalOpen = false;
-        playIntroAnimation();
-        loadingScreen.remove();
-      },
-    },
-    "-=0.1"
-  );
-}
-
-function playIntroAnimation() {
-  const t1 = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  t1.timeScale(0.8);
-
-  t1.to(plank1.scale, {
-    x: 1,
-    y: 1,
-  })
-    .to(
-      plank2.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      workBtn.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.6"
-    )
-    .to(
-      aboutBtn.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.6"
-    )
-    .to(
-      contactBtn.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.6"
-    );
-
-  const tFrames = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  tFrames.timeScale(0.8);
-
-  tFrames
-    .to(frame1.scale, {
-      x: 1,
-      y: 1,
-      z: 1,
-    })
-    .to(
-      frame2.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      frame3.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    );
-
-  const t2 = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  t2.timeScale(0.8);
-
-  t2.to(boba.scale, {
-    z: 1,
-    y: 1,
-    x: 1,
-    delay: 0.4,
-  })
-    .to(
-      github.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      youtube.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.6"
-    )
-    .to(
-      twitter.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.6"
-    );
-
-  const tFlowers = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  tFlowers.timeScale(0.8);
-
-  tFlowers
-    .to(flower5.scale, {
-      x: 1,
-      y: 1,
-      z: 1,
-    })
-    .to(
-      flower4.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      flower3.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      flower2.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      flower1.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    );
-
-  const tBoxes = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  tBoxes.timeScale(0.8);
-
-  tBoxes
-    .to(box1.scale, {
-      x: 1,
-      y: 1,
-      z: 1,
-    })
-    .to(
-      box2.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      box3.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    );
-
-  const tLamp = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      delay: 0.2,
-      ease: "back.out(1.8)",
-    },
-  });
-  tLamp.timeScale(0.8);
-
-  tLamp.to(lamp.scale, {
-    x: 1,
-    y: 1,
-    z: 1,
-  });
-
-  const tSlippers = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  tSlippers.timeScale(0.8);
-
-  tSlippers
-    .to(slippers1.scale, {
-      x: 1,
-      y: 1,
-      z: 1,
-      delay: 0.5,
-    })
-    .to(
-      slippers2.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    );
-
-  const tEggs = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  tEggs.timeScale(0.8);
-
-  tEggs
-    .to(egg1.scale, {
-      x: 1,
-      y: 1,
-      z: 1,
-    })
-    .to(
-      egg2.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    )
-    .to(
-      egg3.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-      },
-      "-=0.5"
-    );
-
-  const tFish = gsap.timeline({
-    defaults: {
-      delay: 0.8,
-      duration: 0.8,
-      ease: "back.out(1.8)",
-    },
-  });
-  tFish.timeScale(0.8);
-
-  tFish.to(fish.scale, {
-    x: 1,
-    y: 1,
-    z: 1,
-  });
-
-  const lettersTl = gsap.timeline({
-    defaults: {
-      duration: 0.8,
-      ease: "back.out(1.7)",
-    },
-  });
-  lettersTl.timeScale(0.8);
-
-  lettersTl
-    .to(letter1.position, {
-      y: letter1.userData.initialPosition.y + 0.3,
-      duration: 0.4,
-      ease: "back.out(1.8)",
       delay: 0.25,
+      ease: "back.in(1.8)",
     })
     .to(
-      letter1.scale,
+      loadingScreen,
       {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
+        y: "200vh",
+        transform: "perspective(1000px) rotateX(45deg) rotateY(-35deg)",
+        duration: 1.2,
+        ease: "back.in(1.8)",
+        onComplete: () => {
+          sceneInputBlocked = false;
+          playIntroAnimation();
+          loadingScreen.remove();
+        },
       },
-      "<"
-    )
-    .to(
-      letter1.position,
-      {
-        y: letter1.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
-    )
-
-    .to(
-      letter2.position,
-      {
-        y: letter2.userData.initialPosition.y + 0.3,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "-=0.5"
-    )
-    .to(
-      letter2.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "<"
-    )
-    .to(
-      letter2.position,
-      {
-        y: letter2.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
-    )
-
-    .to(
-      letter3.position,
-      {
-        y: letter3.userData.initialPosition.y + 0.3,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "-=0.5"
-    )
-    .to(
-      letter3.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "<"
-    )
-    .to(
-      letter3.position,
-      {
-        y: letter3.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
-    )
-
-    .to(
-      letter4.position,
-      {
-        y: letter4.userData.initialPosition.y + 0.3,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "-=0.5"
-    )
-    .to(
-      letter4.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "<"
-    )
-    .to(
-      letter4.position,
-      {
-        y: letter4.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
-    )
-
-    .to(
-      letter5.position,
-      {
-        y: letter5.userData.initialPosition.y + 0.3,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "-=0.5"
-    )
-    .to(
-      letter5.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "<"
-    )
-    .to(
-      letter5.position,
-      {
-        y: letter5.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
-    )
-
-    .to(
-      letter6.position,
-      {
-        y: letter6.userData.initialPosition.y + 0.3,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "-=0.5"
-    )
-    .to(
-      letter6.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "<"
-    )
-    .to(
-      letter6.position,
-      {
-        y: letter6.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
-    )
-
-    .to(
-      letter7.position,
-      {
-        y: letter7.userData.initialPosition.y + 0.3,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "-=0.5"
-    )
-    .to(
-      letter7.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "<"
-    )
-    .to(
-      letter7.position,
-      {
-        y: letter7.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
-    )
-
-    .to(
-      letter8.position,
-      {
-        y: letter8.userData.initialPosition.y + 0.3,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "-=0.5"
-    )
-    .to(
-      letter8.scale,
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      "<"
-    )
-    .to(
-      letter8.position,
-      {
-        y: letter8.userData.initialPosition.y,
-        duration: 0.4,
-        ease: "back.out(1.8)",
-      },
-      ">-0.2"
+      "-=0.1"
     );
+}
 
-  const pianoKeysTl = gsap.timeline({
-    defaults: {
-      duration: 0.4,
-      ease: "back.out(1.7)",
-      onComplete: () => {
-        setTimeout(() => {
-          createDelayedHitboxes();
-        }, 1950);
-      },
-    },
+/** Pops the props in, then bounces in the name letters; hitboxes appear when it ends. */
+function playIntroAnimation() {
+  const timeline = gsap.timeline({
+    defaults: { duration: 0.4, ease: "back.out(1.8)" },
+    onComplete: createDelayedHitboxes,
   });
-  pianoKeysTl.timeScale(1.2);
 
-  const pianoKeys = [
-    C1_Key,
-    Cs1_Key,
-    D1_Key,
-    Ds1_Key,
-    E1_Key,
-    F1_Key,
-    Fs1_Key,
-    G1_Key,
-    Gs1_Key,
-    A1_Key,
-    As1_Key,
-    B1_Key,
-    C2_Key,
-    Cs2_Key,
-    D2_Key,
-    Ds2_Key,
-    E2_Key,
-    F2_Key,
-    Fs2_Key,
-    G2_Key,
-    Gs2_Key,
-    A2_Key,
-    As2_Key,
-    B2_Key,
-  ];
+  popInObjects.forEach((object, index) => {
+    timeline.to(
+      object.scale,
+      { x: 1, y: 1, z: 1, duration: 0.8 },
+      index === 0 ? 0 : "-=0.65"
+    );
+  });
 
-  pianoKeys.forEach((key, index) => {
-    pianoKeysTl
-      .to(
-        key.position,
-        {
-          y: key.userData.initialPosition.y + 0.2,
-          duration: 0.4,
-          ease: "back.out(1.8)",
-        },
-        index * 0.1
-      )
-      .to(
-        key.scale,
-        {
-          x: 1,
-          y: 1,
-          z: 1,
-          duration: 0.4,
-          ease: "back.out(1.8)",
-        },
-        "<"
-      )
-      .to(
-        key.position,
-        {
-          y: key.userData.initialPosition.y,
-          duration: 0.4,
-          ease: "back.out(1.8)",
-        },
-        ">-0.2"
-      );
+  letters.filter(Boolean).forEach((letter) => {
+    const restY = letter.userData.initialPosition.y;
+    timeline
+      .to(letter.position, { y: restY + 0.3 }, "-=0.25")
+      .to(letter.scale, { x: 1, y: 1, z: 1 }, "<")
+      .to(letter.position, { y: restY }, ">-0.2");
   });
 }
 
-/**  -------------------------- Loaders & Texture Preparations -------------------------- */
-const textureLoader = new THREE.TextureLoader();
+/**  -------------------------- Loaders and materials -------------------------- */
+
+const textureLoader = new THREE.TextureLoader(manager);
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath("/draco/");
@@ -1030,268 +289,130 @@ dracoLoader.setDecoderPath("/draco/");
 const loader = new GLTFLoader(manager);
 loader.setDRACOLoader(dracoLoader);
 
-const environmentMap = new THREE.CubeTextureLoader()
-  .setPath("textures/skybox/")
-  .load(["px.webp", "nx.webp", "py.webp", "ny.webp", "pz.webp", "nz.webp"]);
+/** Baked atlas names; each is a substring of the meshes that use it. */
+const ATLASES = ["First", "Second"];
+/** Phones and small tablets get the smaller (2048 px) atlases to stay inside iOS GPU limits. */
+const TEXTURE_TIER =
+  Math.min(screen.width, screen.height) < 768 ? "mobile" : "desktop";
 
-const textureMap = {
-  First: {
-    day: "/textures/room/day/first_texture_set_day.webp",
-    night: "/textures/room/night/first_texture_set_night.webp",
-  },
-  Second: {
-    day: "/textures/room/day/second_texture_set_day.webp",
-    night: "/textures/room/night/second_texture_set_night.webp",
-  },
-  Third: {
-    day: "/textures/room/day/third_texture_set_day.webp",
-    night: "/textures/room/night/third_texture_set_night.webp",
-  },
-  Fourth: {
-    day: "/textures/room/day/fourth_texture_set_day.webp",
-    night: "/textures/room/night/fourth_texture_set_night.webp",
-  },
-};
+/** Loads one baked atlas with the settings the bake expects. */
+function loadAtlas(mode, atlas) {
+  const texture = textureLoader.load(
+    `/textures/island/${mode}/${atlas.toLowerCase()}_${TEXTURE_TIER}.webp`
+  );
+  texture.flipY = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
 
-const loadedTextures = {
-  day: {},
-  night: {},
-};
+/** One day/night blend material per atlas. */
+const islandMaterials = Object.fromEntries(
+  ATLASES.map((atlas) => [
+    atlas,
+    new THREE.ShaderMaterial({
+      uniforms: {
+        uDayTexture: { value: loadAtlas("day", atlas) },
+        uNightTexture: { value: loadAtlas("night", atlas) },
+        uMixRatio: { value: 0 },
+      },
+      vertexShader: themeVertexShader,
+      fragmentShader: themeFragmentShader,
+    }),
+  ])
+);
 
-Object.entries(textureMap).forEach(([key, paths]) => {
-  // Load and configure day texture
-  const dayTexture = textureLoader.load(paths.day);
-  dayTexture.flipY = false;
-  dayTexture.colorSpace = THREE.SRGBColorSpace;
-  dayTexture.minFilter = THREE.LinearFilter;
-  dayTexture.magFilter = THREE.LinearFilter;
-  loadedTextures.day[key] = dayTexture;
+/** Unlit video material for a mesh named `*Screen*`, created on first use. */
+function createScreenMaterial() {
+  const video = document.createElement("video");
+  video.src = "/textures/video/phone.mp4";
+  video.loop = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.autoplay = true;
+  video.play();
 
-  // Load and configure night texture
-  const nightTexture = textureLoader.load(paths.night);
-  nightTexture.flipY = false;
-  nightTexture.colorSpace = THREE.SRGBColorSpace;
-  nightTexture.minFilter = THREE.LinearFilter;
-  nightTexture.magFilter = THREE.LinearFilter;
-  loadedTextures.night[key] = nightTexture;
-});
+  const texture = new THREE.VideoTexture(video);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.flipY = false;
+  return new THREE.MeshBasicMaterial({ map: texture });
+}
 
-// Reuseable Materials
-const glassMaterial = new THREE.MeshPhysicalMaterial({
-  transmission: 1,
-  opacity: 1,
-  color: 0xfbfbfb,
-  metalness: 0,
-  roughness: 0,
-  ior: 3,
-  thickness: 0.01,
-  specularIntensity: 1,
-  envMap: environmentMap,
-  envMapIntensity: 1,
-  depthWrite: false,
-  specularColor: 0xfbfbfb,
-});
+/**  -------------------------- Falling petals -------------------------- */
 
-const whiteMaterial = new THREE.MeshBasicMaterial({
-  color: 0xffffff,
-});
+// ponytail: count, size and speed are eyeballed; tune on real phones.
+const PETAL_COUNT = isMobile ? 120 : 300;
 
-const createMaterialForTextureSet = (textureSet) => {
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      uDayTexture1: { value: loadedTextures.day.First },
-      uNightTexture1: { value: loadedTextures.night.First },
-      uDayTexture2: { value: loadedTextures.day.Second },
-      uNightTexture2: { value: loadedTextures.night.Second },
-      uDayTexture3: { value: loadedTextures.day.Third },
-      uNightTexture3: { value: loadedTextures.night.Third },
-      uDayTexture4: { value: loadedTextures.day.Fourth },
-      uNightTexture4: { value: loadedTextures.night.Fourth },
-      uMixRatio: { value: 0 },
-      uTextureSet: { value: textureSet },
-    },
-    vertexShader: themeVertexShader,
-    fragmentShader: themeFragmentShader,
-  });
+const petalPositions = new Float32Array(PETAL_COUNT * 3);
+const petalSeeds = new Float32Array(PETAL_COUNT);
+for (let i = 0; i < PETAL_COUNT; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const radius = Math.sqrt(Math.random());
+  petalPositions[i * 3] = Math.cos(angle) * radius;
+  petalPositions[i * 3 + 1] = Math.random();
+  petalPositions[i * 3 + 2] = Math.sin(angle) * radius;
+  petalSeeds[i] = Math.random();
+}
 
-  Object.entries(material.uniforms).forEach(([key, uniform]) => {
-    if (uniform.value instanceof THREE.Texture) {
-      uniform.value.minFilter = THREE.LinearFilter;
-      uniform.value.magFilter = THREE.LinearFilter;
-    }
-  });
+const petalGeometry = new THREE.BufferGeometry();
+petalGeometry.setAttribute(
+  "position",
+  new THREE.BufferAttribute(petalPositions, 3)
+);
+petalGeometry.setAttribute("aSeed", new THREE.BufferAttribute(petalSeeds, 1));
 
-  return material;
-};
-
-const roomMaterials = {
-  First: createMaterialForTextureSet(1),
-  Second: createMaterialForTextureSet(2),
-  Third: createMaterialForTextureSet(3),
-  Fourth: createMaterialForTextureSet(4),
-};
-
-// Smoke Shader setup
-const smokeGeometry = new THREE.PlaneGeometry(1, 1, 16, 64);
-smokeGeometry.translate(0, 0.5, 0);
-smokeGeometry.scale(0.33, 1, 0.33);
-
-const perlinTexture = textureLoader.load("/shaders/perlin.png");
-perlinTexture.wrapS = THREE.RepeatWrapping;
-perlinTexture.wrapT = THREE.RepeatWrapping;
-
-const smokeMaterial = new THREE.ShaderMaterial({
-  vertexShader: smokeVertexShader,
-  fragmentShader: smokeFragmentShader,
+const petalMaterial = new THREE.ShaderMaterial({
   uniforms: {
-    uTime: new THREE.Uniform(0),
-    uPerlinTexture: new THREE.Uniform(perlinTexture),
+    uTime: { value: 0 },
+    uTop: { value: 5 },
+    uFall: { value: 9 },
+    uRadius: { value: 4 },
+    uSize: { value: 220 },
+    uPixelRatio: { value: renderer.getPixelRatio() },
+    uMixRatio: { value: 0 },
   },
-  side: THREE.DoubleSide,
+  vertexShader: petalVertexShader,
+  fragmentShader: petalFragmentShader,
   transparent: true,
   depthWrite: false,
 });
 
-const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
-smoke.position.y = 1.83;
-scene.add(smoke);
+const petals = new THREE.Points(petalGeometry, petalMaterial);
+// The shader moves every point, so the attribute bounds say nothing about where petals are.
+petals.frustumCulled = false;
+scene.add(petals);
 
-const videoElement = document.createElement("video");
-videoElement.src = "/textures/video/Screen.mp4";
-videoElement.loop = true;
-videoElement.muted = true;
-videoElement.playsInline = true;
-videoElement.autoplay = true;
-videoElement.play();
+/** Spawns petals inside the canopy and lets them fall about 4 m below the grass. */
+function fitPetalsToCanopy(canopy) {
+  const box = new THREE.Box3().setFromObject(canopy);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
 
-const videoTexture = new THREE.VideoTexture(videoElement);
-videoTexture.colorSpace = THREE.SRGBColorSpace;
-videoTexture.flipY = false;
+  petals.position.set(center.x, 0, center.z);
+  petalMaterial.uniforms.uTop.value = center.y;
+  petalMaterial.uniforms.uFall.value = center.y + 4;
+  petalMaterial.uniforms.uRadius.value = (Math.max(size.x, size.z) / 2) * 0.9;
+}
 
-/**  -------------------------- Model and Mesh Setup -------------------------- */
+/**  -------------------------- Model -------------------------- */
 
-// LOL DO NOT DO THIS USE A FUNCTION TO AUTOMATE THIS PROCESS HAHAHAAHAHAHAHAHAHA
-let fish;
-let coffeePosition;
-let hourHand;
-let minuteHand;
-let chairTop;
-const xAxisFans = [];
-const yAxisFans = [];
-let plank1,
-  plank2,
-  workBtn,
-  aboutBtn,
-  contactBtn,
-  boba,
-  github,
-  youtube,
-  twitter;
-
-let letter1, letter2, letter3, letter4, letter5, letter6, letter7, letter8;
-
-let C1_Key,
-  Cs1_Key,
-  D1_Key,
-  Ds1_Key,
-  E1_Key,
-  F1_Key,
-  Fs1_Key,
-  G1_Key,
-  Gs1_Key,
-  A1_Key,
-  As1_Key,
-  B1_Key;
-let C2_Key,
-  Cs2_Key,
-  D2_Key,
-  Ds2_Key,
-  E2_Key,
-  F2_Key,
-  Fs2_Key,
-  G2_Key,
-  Gs2_Key,
-  A2_Key,
-  As2_Key,
-  B2_Key;
-
-let flower1, flower2, flower3, flower4, flower5;
-
-let box1, box2, box3;
-
-let lamp;
-
-let slippers1, slippers2;
-
-let egg1, egg2, egg3;
-
-let frame1, frame2, frame3;
-
-const useOriginalMeshObjects = ["Bulb", "Cactus", "Kirby"];
-
-const objectsNeedingHitboxes = [];
-
+/** Mesh-name prefixes that scale in during the intro. */
 const objectsWithIntroAnimations = [
-  "Hanging_Plank_1",
-  "Hanging_Plank_2",
-  "My_Work_Button",
-  "About_Button",
-  "Contact_Button",
-  "Boba",
-  "GitHub",
-  "YouTube",
-  "Twitter",
-  "Name_Letter_1",
-  "Name_Letter_2",
-  "Name_Letter_3",
-  "Name_Letter_4",
-  "Name_Letter_5",
-  "Name_Letter_6",
-  "Name_Letter_7",
-  "Name_Letter_8",
-  "Flower_1",
-  "Flower_2",
-  "Flower_3",
-  "Flower_4",
-  "Flower_5",
-  "Box_1",
-  "Box_2",
-  "Box_3",
-  "Lamp",
-  "Slipper_1",
-  "Slipper_2",
-  "Fish_Fourth",
-  "Egg_1",
-  "Egg_2",
-  "Egg_3",
-  "Frame_1",
-  "Frame_2",
-  "Frame_3",
-  "C1_Key",
-  "C#1_Key",
-  "D1_Key",
-  "D#1_Key",
-  "E1_Key",
-  "F1_Key",
-  "F#1_Key",
-  "G1_Key",
-  "G#1_Key",
-  "A1_Key",
-  "A#1_Key",
-  "B1_Key",
-  "C2_Key",
-  "C#2_Key",
-  "D2_Key",
-  "D#2_Key",
-  "E2_Key",
-  "F2_Key",
-  "F#2_Key",
-  "G2_Key",
-  "G#2_Key",
-  "A2_Key",
-  "A#2_Key",
-  "B2_Key",
+  "Phone",
+  "Paper_Airplane",
+  "Writing_",
+  "Robot_Hand",
+  "Stone_",
+  "Minecraft_Block",
 ];
+
+/** Name letters in N order; the count comes from the model. */
+const letters = [];
+/** Props that pop in before the letters. */
+const popInObjects = [];
+/** Interactive meshes that get hitboxes once the intro ends. */
+const objectsNeedingHitboxes = [];
 
 function hasIntroAnimation(objectName) {
   return objectsWithIntroAnimations.some((animatedName) =>
@@ -1299,544 +420,244 @@ function hasIntroAnimation(objectName) {
   );
 }
 
-loader.load("/models/Room_Portfolio.glb", (glb) => {
+loader.load("/models/island.glb", (glb) => {
   glb.scene.traverse((child) => {
-    if (child.isMesh) {
-      if (child.name.includes("Fish_Fourth")) {
-        fish = child;
-        child.position.x += 0.04;
-        child.position.z -= 0.03;
-        child.userData.initialPosition = new THREE.Vector3().copy(
-          child.position
-        );
-      }
-      if (child.name.includes("Chair_Top")) {
-        chairTop = child;
-        child.userData.initialRotation = new THREE.Euler().copy(child.rotation);
-      }
+    if (!child.isMesh) return;
 
-      if (child.name.includes("Hour_Hand")) {
-        hourHand = child;
-        child.userData.initialRotation = new THREE.Euler().copy(child.rotation);
-      }
+    if (child.name.includes("Hover")) {
+      child.userData.initialScale = child.scale.clone();
+      child.userData.initialPosition = child.position.clone();
+    }
 
-      if (child.name.includes("Minute_Hand")) {
-        minuteHand = child;
-        child.userData.initialRotation = new THREE.Euler().copy(child.rotation);
-      }
+    const letterIndex = letterNumber(child.name);
+    if (letterIndex) {
+      letters[letterIndex - 1] = child;
+      child.scale.set(0, 0, 0);
+    } else if (hasIntroAnimation(child.name)) {
+      popInObjects.push(child);
+      child.scale.set(0, 0, 0);
+    }
 
-      if (child.name.includes("Coffee")) {
-        coffeePosition = child.position.clone();
-      }
+    if (child.name.includes("Canopy")) {
+      fitPetalsToCanopy(child);
+    }
 
-      if (child.name.includes("Hover") || child.name.includes("Key")) {
-        child.userData.initialScale = new THREE.Vector3().copy(child.scale);
-        child.userData.initialPosition = new THREE.Vector3().copy(
-          child.position
-        );
-        child.userData.initialRotation = new THREE.Euler().copy(child.rotation);
-      }
+    if (child.name.includes("Screen")) {
+      child.material = createScreenMaterial();
+    } else {
+      const atlas = ATLASES.find((name) => child.name.includes(name));
+      if (atlas) child.material = islandMaterials[atlas];
+    }
 
-      // LOL DO NOT DO THIS USE A FUNCTION TO AUTOMATE THIS PROCESS HAHAHAAHAHAHAHAHAHA
-      if (child.name.includes("Hanging_Plank_1")) {
-        plank1 = child;
-        child.scale.set(0, 0, 1);
-      } else if (child.name.includes("Hanging_Plank_2")) {
-        plank2 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("My_Work_Button")) {
-        workBtn = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("About_Button")) {
-        aboutBtn = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Contact_Button")) {
-        contactBtn = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Boba")) {
-        boba = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("GitHub")) {
-        github = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("YouTube")) {
-        youtube = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Twitter")) {
-        twitter = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_1")) {
-        letter1 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_2")) {
-        letter2 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_3")) {
-        letter3 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_4")) {
-        letter4 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_5")) {
-        letter5 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_6")) {
-        letter6 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_7")) {
-        letter7 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Name_Letter_8")) {
-        letter8 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Flower_1")) {
-        flower1 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Flower_2")) {
-        flower2 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Flower_3")) {
-        flower3 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Flower_4")) {
-        flower4 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Flower_5")) {
-        flower5 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Box_1")) {
-        box1 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Box_2")) {
-        box2 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Box_3")) {
-        box3 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Lamp")) {
-        lamp = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Slipper_1")) {
-        slippers1 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Slipper_2")) {
-        slippers2 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Fish_Fourth")) {
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Egg_1")) {
-        egg1 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Egg_2")) {
-        egg2 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Egg_3")) {
-        egg3 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Frame_1")) {
-        frame1 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Frame_2")) {
-        frame2 = child;
-        child.scale.set(0, 0, 0);
-      } else if (child.name.includes("Frame_3")) {
-        frame3 = child;
-        child.scale.set(0, 0, 0);
-      }
-      Object.keys(pianoKeyMap).forEach((keyName) => {
-        if (child.name.includes(keyName)) {
-          const varName = keyName.replace("#", "s").split("_")[0] + "_Key";
-          eval(`${varName} = child`);
-          child.scale.set(0, 0, 0);
-          child.userData.initialPosition = new THREE.Vector3().copy(
-            child.position
-          );
-        }
-      });
-
-      if (child.name.includes("Water")) {
-        child.material = new THREE.MeshBasicMaterial({
-          color: 0x558bc8,
-          transparent: true,
-          opacity: 0.4,
-          depthWrite: false,
-        });
-      } else if (child.name.includes("Glass")) {
-        child.material = glassMaterial;
-      } else if (child.name.includes("Bubble")) {
-        child.material = whiteMaterial;
-      } else if (child.name.includes("Screen")) {
-        child.material = new THREE.MeshBasicMaterial({
-          map: videoTexture,
-          transparent: true,
-          opacity: 0.9,
-        });
+    if (child.name.includes("Raycaster")) {
+      if (letterIndex || hasIntroAnimation(child.name)) {
+        objectsNeedingHitboxes.push(child);
       } else {
-        Object.keys(textureMap).forEach((key) => {
-          if (child.name.includes(key)) {
-            child.material = roomMaterials[key];
-
-            if (child.name.includes("Fan")) {
-              if (
-                child.name.includes("Fan_2") ||
-                child.name.includes("Fan_4")
-              ) {
-                xAxisFans.push(child);
-              } else {
-                yAxisFans.push(child);
-              }
-            }
-          }
-        });
-      }
-
-      if (child.name.includes("Raycaster")) {
-        if (hasIntroAnimation(child.name)) {
-          // Create a hitbox for object after intro is done playing,
-          // Set an original scale first for the hitbox
-          child.userData.originalScale = new THREE.Vector3(1, 1, 1);
-
-          objectsNeedingHitboxes.push(child);
-        } else {
-          // Create immediate hitboxes/meshes for objects that DON'T have an intro animation
-          const raycastObject = createStaticHitbox(child);
-
-          if (raycastObject !== child) {
-            scene.add(raycastObject);
-          }
-
-          raycasterObjects.push(raycastObject);
-          hitboxToObjectMap.set(raycastObject, child);
-        }
+        addHitbox(child);
       }
     }
   });
-
-  if (coffeePosition) {
-    smoke.position.set(
-      coffeePosition.x,
-      coffeePosition.y + 0.2,
-      coffeePosition.z
-    );
-  }
 
   scene.add(glb.scene);
 });
 
-/**  -------------------------- Raycaster setup -------------------------- */
+/**  -------------------------- Hitboxes, hover and clicks -------------------------- */
 
+const raycaster = new THREE.Raycaster();
+// Start off-screen so nothing is hovered before the first pointer move.
+const pointer = new THREE.Vector2(10, 10);
 const raycasterObjects = [];
+const hitboxToObjectMap = new Map();
 let currentIntersects = [];
 let currentHoveredObject = null;
 
-const socialLinks = {
-  GitHub: "https://github.com/andrewwoan/sooahkimsfolio",
-  YouTube: "https://youtu.be/AB6sulUMRGE",
-  Twitter: "https://www.twitter.com/",
-};
-
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-
-const hitboxToObjectMap = new Map();
-
-function shouldUseOriginalMesh(objectName) {
-  return useOriginalMeshObjects.some((meshName) =>
-    objectName.includes(meshName)
-  );
-}
-
-function createStaticHitbox(originalObject) {
-  // Check if we should use original mesh
-  if (shouldUseOriginalMesh(originalObject.name)) {
-    if (!originalObject.userData.initialScale) {
-      originalObject.userData.initialScale = new THREE.Vector3().copy(
-        originalObject.scale
-      );
-    }
-    if (!originalObject.userData.initialPosition) {
-      originalObject.userData.initialPosition = new THREE.Vector3().copy(
-        originalObject.position
-      );
-    }
-    if (!originalObject.userData.initialRotation) {
-      originalObject.userData.initialRotation = new THREE.Euler().copy(
-        originalObject.rotation
-      );
-    }
-
-    originalObject.userData.originalObject = originalObject;
-    return originalObject;
-  }
-
-  if (!originalObject.userData.initialScale) {
-    originalObject.userData.initialScale = new THREE.Vector3().copy(
-      originalObject.scale
-    );
-  }
-  if (!originalObject.userData.initialPosition) {
-    originalObject.userData.initialPosition = new THREE.Vector3().copy(
-      originalObject.position
-    );
-  }
-  if (!originalObject.userData.initialRotation) {
-    originalObject.userData.initialRotation = new THREE.Euler().copy(
-      originalObject.rotation
-    );
-  }
-
-  const currentScale = originalObject.scale.clone();
-  const hasZeroScale =
-    currentScale.x === 0 || currentScale.y === 0 || currentScale.z === 0;
-
-  if (hasZeroScale && originalObject.userData.originalScale) {
-    originalObject.scale.copy(originalObject.userData.originalScale);
-  }
-
-  const box = new THREE.Box3().setFromObject(originalObject);
+/**
+ * Adds an invisible box around an object; boxes are steadier to hover than the
+ * real mesh, which jitters while its hover animation runs.
+ */
+function addHitbox(object) {
+  const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
-  if (hasZeroScale) {
-    originalObject.scale.copy(currentScale);
-  }
-
-  let hitboxGeometry;
-  let sizeMultiplier = { x: 1.1, y: 1.75, z: 1.1 };
-
-  hitboxGeometry = new THREE.BoxGeometry(
-    size.x * sizeMultiplier.x,
-    size.y * sizeMultiplier.y,
-    size.z * sizeMultiplier.z
+  const hitbox = new THREE.Mesh(
+    new THREE.BoxGeometry(size.x * 1.1, size.y * 1.75, size.z * 1.1),
+    new THREE.MeshBasicMaterial({ visible: false })
   );
-
-  const hitboxMaterial = new THREE.MeshBasicMaterial({
-    transparent: true,
-    opacity: 0,
-    visible: false,
-  });
-
-  const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
   hitbox.position.copy(center);
-  hitbox.name = originalObject.name + "_Hitbox";
-  hitbox.userData.originalObject = originalObject;
+  hitbox.name = object.name + "_Hitbox";
+  hitbox.userData.labelAnchor = new THREE.Vector3(center.x, box.max.y, center.z);
 
-  if (originalObject.name.includes("Headphones")) {
-    hitbox.rotation.x = 0;
-    hitbox.rotation.y = Math.PI / 4;
-    hitbox.rotation.z = 0;
-  }
-
-  return hitbox;
+  scene.add(hitbox);
+  raycasterObjects.push(hitbox);
+  hitboxToObjectMap.set(hitbox, object);
 }
 
 function createDelayedHitboxes() {
-  objectsNeedingHitboxes.forEach((child) => {
-    const raycastObject = createStaticHitbox(child);
-
-    if (raycastObject !== child) {
-      scene.add(raycastObject);
-    }
-
-    raycasterObjects.push(raycastObject);
-    hitboxToObjectMap.set(raycastObject, child);
-  });
-
+  objectsNeedingHitboxes.forEach(addHitbox);
   objectsNeedingHitboxes.length = 0;
 }
 
-function handleRaycasterInteraction() {
-  if (currentIntersects.length > 0) {
-    const hitbox = currentIntersects[0].object;
-    const object = hitboxToObjectMap.get(hitbox);
+/** Plays the click sound and runs the object's action: open a link or a modal. */
+function runInteraction(hitbox) {
+  const object = hitboxToObjectMap.get(hitbox);
+  const action = object && findInteraction(object.name);
+  if (!action) return;
 
-    if (object.name.includes("Button")) {
-      buttonSounds.click.play();
-    }
-
-    Object.entries(pianoKeyMap).forEach(([keyName, soundKey]) => {
-      if (object.name.includes(keyName)) {
-        if (pianoDebounceTimer) {
-          clearTimeout(pianoDebounceTimer);
-        }
-
-        fadeOutBackgroundMusic();
-
-        pianoSounds[soundKey].play();
-
-        pianoDebounceTimer = setTimeout(() => {
-          fadeInBackgroundMusic();
-        }, PIANO_TIMEOUT);
-
-        gsap.to(object.rotation, {
-          x: object.userData.initialRotation.x + Math.PI / 42,
-          duration: 0.4,
-          ease: "back.out(2)",
-          onComplete: () => {
-            gsap.to(object.rotation, {
-              x: object.userData.initialRotation.x,
-              duration: 0.25,
-              ease: "back.out(2)",
-            });
-          },
-        });
-      }
-    });
-
-    Object.entries(socialLinks).forEach(([key, url]) => {
-      if (object.name.includes(key)) {
-        const newWindow = window.open();
-        newWindow.opener = null;
-        newWindow.location = url;
-        newWindow.target = "_blank";
-        newWindow.rel = "noopener noreferrer";
-      }
-    });
-
-    if (object.name.includes("Work_Button")) {
-      showModal(modals.work);
-    } else if (object.name.includes("About_Button")) {
-      showModal(modals.about);
-    } else if (object.name.includes("Contact_Button")) {
-      showModal(modals.contact);
-    }
+  clickSound.play();
+  if (action.url) {
+    window.open(action.url, "_blank", "noopener,noreferrer");
+  } else {
+    showModal(modals[action.modal]);
   }
 }
 
-function playHoverAnimation(objectHitbox, isHovering) {
-  let scale = 1.4;
-  const object = hitboxToObjectMap.get(objectHitbox);
+/** Hover scale per object; the lying figure only breathes, stones barely grow. */
+function hoverScaleFor(objectName) {
+  if (objectName.includes("Anu_Figure")) return 1.05;
+  if (objectName.includes("Stone_")) return 1.15;
+  return 1.3;
+}
+
+/** Objects that lift on hover instead of only growing. */
+function liftsOnHover(objectName) {
+  return objectName.includes("Name_Letter") || objectName.includes("Stone_");
+}
+
+/** Grows (and for some objects lifts) an object on hover, and puts it back after. */
+function playHoverAnimation(hitbox, isHovering) {
+  const object = hitboxToObjectMap.get(hitbox);
+  const { initialScale, initialPosition } = object.userData;
+  const scale = isHovering ? hoverScaleFor(object.name) : 1;
+  const tween = { duration: isHovering ? 0.5 : 0.3, ease: "back.out(2)" };
+
   gsap.killTweensOf(object.scale);
-  gsap.killTweensOf(object.rotation);
   gsap.killTweensOf(object.position);
 
-  if (object.name.includes("Coffee")) {
-    gsap.killTweensOf(smoke.scale);
-    if (isHovering) {
-      gsap.to(smoke.scale, {
-        x: 1.4,
-        y: 1.4,
-        z: 1.4,
-        duration: 0.5,
-        ease: "back.out(2)",
-      });
-    } else {
-      gsap.to(smoke.scale, {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.3,
-        ease: "back.out(2)",
-      });
-    }
-  }
+  gsap.to(object.scale, {
+    x: initialScale.x * scale,
+    y: initialScale.y * scale,
+    z: initialScale.z * scale,
+    ...tween,
+  });
 
-  if (object.name.includes("Fish")) {
-    scale = 1.2;
-  }
-
-  if (isHovering) {
-    // Scale animation for all objects
-    gsap.to(object.scale, {
-      x: object.userData.initialScale.x * scale,
-      y: object.userData.initialScale.y * scale,
-      z: object.userData.initialScale.z * scale,
-      duration: 0.5,
-      ease: "back.out(2)",
+  if (liftsOnHover(object.name)) {
+    gsap.to(object.position, {
+      y: initialPosition.y + (isHovering ? 0.2 : 0),
+      ...tween,
     });
-
-    if (object.name.includes("About_Button")) {
-      gsap.to(object.rotation, {
-        x: object.userData.initialRotation.x - Math.PI / 10,
-        duration: 0.5,
-        ease: "back.out(2)",
-      });
-    } else if (
-      object.name.includes("Contact_Button") ||
-      object.name.includes("My_Work_Button") ||
-      object.name.includes("GitHub") ||
-      object.name.includes("YouTube") ||
-      object.name.includes("Twitter")
-    ) {
-      gsap.to(object.rotation, {
-        x: object.userData.initialRotation.x + Math.PI / 10,
-        duration: 0.5,
-        ease: "back.out(2)",
-      });
-    }
-
-    if (object.name.includes("Boba") || object.name.includes("Name_Letter")) {
-      gsap.to(object.position, {
-        y: object.userData.initialPosition.y + 0.2,
-        duration: 0.5,
-        ease: "back.out(2)",
-      });
-    }
-  } else {
-    // Reset scale for all objects
-    gsap.to(object.scale, {
-      x: object.userData.initialScale.x,
-      y: object.userData.initialScale.y,
-      z: object.userData.initialScale.z,
-      duration: 0.3,
-      ease: "back.out(2)",
-    });
-
-    if (
-      object.name.includes("About_Button") ||
-      object.name.includes("Contact_Button") ||
-      object.name.includes("My_Work_Button") ||
-      object.name.includes("GitHub") ||
-      object.name.includes("YouTube") ||
-      object.name.includes("Twitter")
-    ) {
-      gsap.to(object.rotation, {
-        x: object.userData.initialRotation.x,
-        duration: 0.3,
-        ease: "back.out(2)",
-      });
-    }
-
-    if (object.name.includes("Boba") || object.name.includes("Name_Letter")) {
-      gsap.to(object.position, {
-        y: object.userData.initialPosition.y,
-        duration: 0.3,
-        ease: "back.out(2)",
-      });
-    }
   }
 }
 
-window.addEventListener("mousemove", (e) => {
-  touchHappened = false;
+/** Ends any hover and resets the cursor; used when a modal opens. */
+function clearHover() {
+  if (currentHoveredObject) {
+    playHoverAnimation(currentHoveredObject, false);
+    currentHoveredObject = null;
+  }
+  document.body.style.cursor = "default";
+  currentIntersects = [];
+}
+
+/** Raycasts from the pointer and starts or ends hover animations. */
+function updateHover() {
+  raycaster.setFromCamera(pointer, camera);
+  currentIntersects = raycaster.intersectObjects(raycasterObjects);
+
+  const hitbox = currentIntersects[0]?.object;
+  if (!hitbox) {
+    clearHover();
+    return;
+  }
+
+  if (hitbox.name.includes("Hover") && hitbox !== currentHoveredObject) {
+    if (currentHoveredObject) playHoverAnimation(currentHoveredObject, false);
+    currentHoveredObject = hitbox;
+    playHoverAnimation(hitbox, true);
+  }
+
+  document.body.style.cursor = hitbox.name.includes("Pointer")
+    ? "pointer"
+    : "default";
+}
+
+const objectLabel = document.querySelector(".object-label");
+const labelPosition = new THREE.Vector3();
+
+/** Keeps the hover label above the hovered object, or hides it. */
+function updateLabel() {
+  if (!currentHoveredObject || sceneInputBlocked) {
+    objectLabel.classList.remove("is-visible");
+    return;
+  }
+
+  const object = hitboxToObjectMap.get(currentHoveredObject);
+  const text = findInteraction(object.name)?.label ?? "";
+  if (objectLabel.textContent !== text) objectLabel.textContent = text;
+
+  labelPosition.copy(currentHoveredObject.userData.labelAnchor).project(camera);
+  const x = ((labelPosition.x + 1) / 2) * sizes.width;
+  const y = ((1 - labelPosition.y) / 2) * sizes.height;
+  objectLabel.style.transform = `translate(${x}px, ${y}px) translate(-50%, -130%)`;
+  objectLabel.classList.add("is-visible");
+}
+
+/** Where the last press started, so a camera drag does not count as a click. */
+const pressPoint = { x: 0, y: 0 };
+let pressMoved = false;
+/** First tap on touch selects an object; a second tap on the same one runs it. */
+let lastTappedHitbox = null;
+
+function setPointer(e) {
   pointer.x = (e.clientX / sizes.width) * 2 - 1;
   pointer.y = -(e.clientY / sizes.height) * 2 + 1;
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  setPointer(e);
+  pressPoint.x = e.clientX;
+  pressPoint.y = e.clientY;
+  pressMoved = false;
 });
 
-window.addEventListener(
-  "touchstart",
-  (e) => {
-    if (isModalOpen) return;
-    e.preventDefault();
-    pointer.x = (e.touches[0].clientX / sizes.width) * 2 - 1;
-    pointer.y = -(e.touches[0].clientY / sizes.height) * 2 + 1;
-  },
-  { passive: false }
-);
+canvas.addEventListener("pointermove", (e) => {
+  if (e.pointerType === "mouse") setPointer(e);
+  if (Math.hypot(e.clientX - pressPoint.x, e.clientY - pressPoint.y) > 6) {
+    pressMoved = true;
+  }
+});
 
-window.addEventListener(
+canvas.addEventListener("pointerleave", (e) => {
+  if (e.pointerType === "mouse") pointer.set(10, 10);
+});
+
+canvas.addEventListener("click", () => {
+  if (sceneInputBlocked || pressMoved) return;
+  const hitbox = currentIntersects[0]?.object;
+  if (hitbox) runInteraction(hitbox);
+});
+
+canvas.addEventListener(
   "touchend",
   (e) => {
-    if (isModalOpen) return;
+    // Stops the browser's emulated click, which would run the action a second time.
     e.preventDefault();
-    handleRaycasterInteraction();
+    if (sceneInputBlocked || pressMoved) return;
+
+    raycaster.setFromCamera(pointer, camera);
+    const hitbox = raycaster.intersectObjects(raycasterObjects)[0]?.object;
+    if (hitbox && hitbox === lastTappedHitbox) {
+      lastTappedHitbox = null;
+      runInteraction(hitbox);
+    } else {
+      lastTappedHitbox = hitbox ?? null;
+    }
   },
   { passive: false }
 );
 
-window.addEventListener("click", handleRaycasterInteraction);
+/**  -------------------------- Sound and theme toggles -------------------------- */
 
-// Other Event Listeners
 const themeToggleButton = document.querySelector(".theme-toggle-button");
 const muteToggleButton = document.querySelector(".mute-toggle-button");
 const sunSvg = document.querySelector(".sun-svg");
@@ -1844,270 +665,85 @@ const moonSvg = document.querySelector(".moon-svg");
 const soundOffSvg = document.querySelector(".sound-off-svg");
 const soundOnSvg = document.querySelector(".sound-on-svg");
 
-const updateMuteState = (muted) => {
-  if (muted) {
-    backgroundMusic.volume(0);
-  } else {
-    backgroundMusic.volume(BACKGROUND_MUSIC_VOLUME);
-  }
+/** Mutes or unmutes every sound and syncs the button icon. */
+function setMuted(muted) {
+  isMuted = muted;
+  Howler.mute(muted);
+  soundOnSvg.style.display = muted ? "none" : "block";
+  soundOffSvg.style.display = muted ? "block" : "none";
+  muteToggleButton.setAttribute("aria-pressed", String(muted));
+}
 
-  buttonSounds.click.mute(muted);
-  Object.values(pianoSounds).forEach((sound) => {
-    sound.mute(muted);
-  });
-};
+/** Gives a toggle button its spin-and-settle feedback. */
+function bounceToggle(button, rotate) {
+  gsap.fromTo(
+    button,
+    { rotate, scale: 1.6 },
+    {
+      rotate: 0,
+      scale: 1,
+      duration: 0.5,
+      ease: "back.out(2)",
+      onComplete: () => gsap.set(button, { clearProps: "all" }),
+    }
+  );
+}
 
-const handleMuteToggle = (e) => {
-  e.preventDefault();
-
-  isMuted = !isMuted;
-  updateMuteState(isMuted);
-  buttonSounds.click.play();
-
-  if (!backgroundMusic.playing()) {
-    backgroundMusic.play();
-  }
-
-  gsap.to(muteToggleButton, {
-    rotate: -45,
-    scale: 5,
-    duration: 0.5,
-    ease: "back.out(2)",
-    onStart: () => {
-      if (!isMuted) {
-        soundOffSvg.style.display = "none";
-        soundOnSvg.style.display = "block";
-      } else {
-        soundOnSvg.style.display = "none";
-        soundOffSvg.style.display = "block";
-      }
-
-      gsap.to(muteToggleButton, {
-        rotate: 0,
-        scale: 1,
-        duration: 0.5,
-        ease: "back.out(2)",
-        onComplete: () => {
-          gsap.set(muteToggleButton, {
-            clearProps: "all",
-          });
-        },
-      });
-    },
-  });
-};
-
-let isMuted = false;
-muteToggleButton.addEventListener(
-  "click",
-  (e) => {
-    if (touchHappened) return;
-    handleMuteToggle(e);
-  },
-  { passive: false }
-);
-
-muteToggleButton.addEventListener(
-  "touchend",
-  (e) => {
-    touchHappened = true;
-    handleMuteToggle(e);
-  },
-  { passive: false }
-);
-
-// Themeing stuff
-const toggleFavicons = () => {
-  const isDark = document.body.classList.contains("dark-theme");
-  const theme = isDark ? "light" : "dark";
-
-  document.querySelector(
-    'link[sizes="96x96"]'
-  ).href = `media/${theme}-favicon/favicon-96x96.png`;
-  document.querySelector(
-    'link[type="image/svg+xml"]'
-  ).href = `/media/${theme}-favicon/favicon.svg`;
-  document.querySelector(
-    'link[rel="shortcut icon"]'
-  ).href = `media/${theme}-favicon/favicon.ico`;
-  document.querySelector(
-    'link[rel="apple-touch-icon"]'
-  ).href = `media/${theme}-favicon/apple-touch-icon.png`;
-  document.querySelector(
-    'link[rel="manifest"]'
-  ).href = `media/${theme}-favicon/site.webmanifest`;
-};
+muteToggleButton.addEventListener("click", () => {
+  setMuted(!isMuted);
+  clickSound.play();
+  if (!backgroundMusic.playing()) backgroundMusic.play();
+  bounceToggle(muteToggleButton, -45);
+});
 
 let isNightMode = false;
 
-const handleThemeToggle = (e) => {
-  e.preventDefault();
-  toggleFavicons();
-
-  const isDark = document.body.classList.contains("dark-theme");
-  document.body.classList.remove(isDark ? "dark-theme" : "light-theme");
-  document.body.classList.add(isDark ? "light-theme" : "dark-theme");
-
+themeToggleButton.addEventListener("click", () => {
   isNightMode = !isNightMode;
-  buttonSounds.click.play();
+  document.body.classList.toggle("dark-theme", isNightMode);
+  document.body.classList.toggle("light-theme", !isNightMode);
+  sunSvg.style.display = isNightMode ? "none" : "block";
+  moonSvg.style.display = isNightMode ? "block" : "none";
+  themeToggleButton.setAttribute("aria-pressed", String(isNightMode));
 
-  gsap.to(themeToggleButton, {
-    rotate: 45,
-    scale: 5,
-    duration: 0.5,
-    ease: "back.out(2)",
-    onStart: () => {
-      if (isNightMode) {
-        sunSvg.style.display = "none";
-        moonSvg.style.display = "block";
-      } else {
-        moonSvg.style.display = "none";
-        sunSvg.style.display = "block";
-      }
+  clickSound.play();
+  bounceToggle(themeToggleButton, 45);
 
-      gsap.to(themeToggleButton, {
-        rotate: 0,
-        scale: 1,
-        duration: 0.5,
-        ease: "back.out(2)",
-        onComplete: () => {
-          gsap.set(themeToggleButton, {
-            clearProps: "all",
-          });
-        },
-      });
-    },
+  const mixTween = {
+    value: isNightMode ? 1 : 0,
+    duration: 1.5,
+    ease: "power2.inOut",
+  };
+  [...Object.values(islandMaterials), petalMaterial].forEach((material) => {
+    gsap.to(material.uniforms.uMixRatio, mixTween);
   });
 
-  Object.values(roomMaterials).forEach((material) => {
-    gsap.to(material.uniforms.uMixRatio, {
-      value: isNightMode ? 1 : 0,
-      duration: 1.5,
-      ease: "power2.inOut",
-    });
+  const sky = SKY_COLORS[isNightMode ? "night" : "day"];
+  gsap.to(scene.background, {
+    r: sky.r,
+    g: sky.g,
+    b: sky.b,
+    duration: 1.5,
+    ease: "power2.inOut",
   });
-};
+});
 
-// Click event listener
-themeToggleButton.addEventListener(
-  "click",
-  (e) => {
-    if (touchHappened) return;
-    handleThemeToggle(e);
-  },
-  { passive: false }
-);
+/**  -------------------------- Render loop -------------------------- */
 
-themeToggleButton.addEventListener(
-  "touchend",
-  (e) => {
-    touchHappened = true;
-    handleThemeToggle(e);
-  },
-  { passive: false }
-);
-
-/**  -------------------------- Render and Animations Stuff -------------------------- */
 const clock = new THREE.Clock();
 
-const updateClockHands = () => {
-  if (!hourHand || !minuteHand) return;
+const render = () => {
+  // Reduced motion freezes the petals in place instead of hiding them.
+  if (!prefersReducedMotion) {
+    petalMaterial.uniforms.uTime.value = clock.getElapsedTime();
+  }
 
-  const now = new Date();
-  const hours = now.getHours() % 12;
-  const minutes = now.getMinutes();
-  const seconds = now.getSeconds();
-
-  const minuteAngle = (minutes + seconds / 60) * ((Math.PI * 2) / 60);
-
-  const hourAngle = (hours + minutes / 60) * ((Math.PI * 2) / 12);
-
-  minuteHand.rotation.x = -minuteAngle;
-  hourHand.rotation.x = -hourAngle;
-};
-
-const render = (timestamp) => {
-  const elapsedTime = clock.getElapsedTime();
-
-  // Update Shader Univform
-  smokeMaterial.uniforms.uTime.value = elapsedTime;
-
-  //Update Orbit Controls
   controls.update();
 
-  // Update Clock hand rotation
-  updateClockHands();
-
-  // Fan rotate animation
-  xAxisFans.forEach((fan) => {
-    fan.rotation.x -= 0.04;
-  });
-
-  yAxisFans.forEach((fan) => {
-    fan.rotation.y -= 0.04;
-  });
-
-  // Chair rotate animation
-  if (chairTop) {
-    const time = timestamp * 0.001;
-    const baseAmplitude = Math.PI / 8;
-
-    const rotationOffset =
-      baseAmplitude *
-      Math.sin(time * 0.5) *
-      (1 - Math.abs(Math.sin(time * 0.5)) * 0.3);
-
-    chairTop.rotation.y = chairTop.userData.initialRotation.y + rotationOffset;
-  }
-
-  // Fish up and down animation
-  if (fish) {
-    const time = timestamp * 0.0015;
-    const amplitude = 0.12;
-    const position =
-      amplitude * Math.sin(time) * (1 - Math.abs(Math.sin(time)) * 0.1);
-    fish.position.y = fish.userData.initialPosition.y + position;
-  }
-
-  // Raycaster
-  if (!isModalOpen) {
-    raycaster.setFromCamera(pointer, camera);
-
-    // Get all the objects the raycaster is currently shooting through / intersecting with
-    currentIntersects = raycaster.intersectObjects(raycasterObjects);
-
-    for (let i = 0; i < currentIntersects.length; i++) {}
-
-    if (currentIntersects.length > 0) {
-      const currentIntersectObject = currentIntersects[0].object;
-
-      if (currentIntersectObject.name.includes("Hover")) {
-        if (currentIntersectObject !== currentHoveredObject) {
-          if (currentHoveredObject) {
-            playHoverAnimation(currentHoveredObject, false);
-          }
-
-          currentHoveredObject = currentIntersectObject;
-          playHoverAnimation(currentIntersectObject, true);
-        }
-      }
-
-      if (currentIntersectObject.name.includes("Pointer")) {
-        document.body.style.cursor = "pointer";
-      } else {
-        document.body.style.cursor = "default";
-      }
-    } else {
-      if (currentHoveredObject) {
-        playHoverAnimation(currentHoveredObject, false);
-        currentHoveredObject = null;
-      }
-      document.body.style.cursor = "default";
-    }
-  }
+  if (!sceneInputBlocked) updateHover();
+  updateLabel();
 
   renderer.render(scene, camera);
-
   window.requestAnimationFrame(render);
 };
 

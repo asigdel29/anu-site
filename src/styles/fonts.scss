@@ -1,17 +1,33 @@
+// Self-hosted OFL fonts: Space Grotesk for headings and buttons, Inter for body text.
+
 @font-face {
-  font-family: "Shifty Notes";
-  src: url("/fonts/ShiftyNotes-Regular.woff2") format("woff2"),
-    url("/fonts/ShiftyNotes-Regular.woff") format("woff");
-  font-weight: normal;
+  font-family: "Space Grotesk";
+  src: url("/fonts/space-grotesk-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Motley Forces";
-  src: url("/fonts/MotleyForces-Regular.woff2") format("woff2"),
-    url("/fonts/MotleyForces-Regular.woff") format("woff");
-  font-weight: normal;
+  font-family: "Space Grotesk";
+  src: url("/fonts/space-grotesk-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-latin-600-normal.woff2") format("woff2");
+  font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
