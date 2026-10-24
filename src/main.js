@@ -43,6 +43,8 @@ const isMobile = window.innerWidth < 768;
 const prefersReducedMotion = window.matchMedia(
   "(prefers-reduced-motion: reduce)"
 ).matches;
+// Reduced motion: every GSAP tween (reveal, intro, modals, hover) finishes almost at once.
+if (prefersReducedMotion) gsap.globalTimeline.timeScale(50);
 
 /** Sky colour per theme; the toggle tweens the scene background between them. */
 const SKY_COLORS = {
@@ -106,23 +108,45 @@ const modals = {
 };
 const overlay = document.querySelector(".overlay");
 
-/** True while the loading screen or a modal covers the scene, so clicks and hovers pause. */
-let sceneInputBlocked = true;
+/** True once the loading screen has gone and the intro has started. */
+let hasRevealed = false;
 /** The modal on screen now, or null. */
 let openModal = null;
 /** Element that had focus before a modal opened, so closing gives focus back. */
 let focusBeforeModal = null;
+
+/** True while the loading screen or a modal covers the scene, so clicks and hovers pause. */
+function isSceneInputBlocked() {
+  return !hasRevealed || openModal !== null;
+}
+
+/** Page parts behind the loading screen and modals; inert keeps keyboard focus out of them. */
+const backgroundParts = [
+  ".site-header",
+  ".mute-toggle-button",
+  ".theme-toggle-button",
+  "#experience",
+].map((selector) => document.querySelector(selector));
+
+function setBackgroundInert(isInert) {
+  backgroundParts.forEach((element) => {
+    element.inert = isInert;
+  });
+}
+setBackgroundInert(true);
 
 /** Opens a modal with a pop animation and moves keyboard focus into it. */
 const showModal = (modal) => {
   if (openModal) return;
   openModal = modal;
   focusBeforeModal = document.activeElement;
+  // A close animation may still be running; stop it so it cannot hide this modal.
+  gsap.killTweensOf([modal, overlay]);
 
   modal.style.display = "block";
   overlay.style.display = "block";
 
-  sceneInputBlocked = true;
+  setBackgroundInert(true);
   controls.enabled = false;
   clearHover();
 
@@ -137,7 +161,7 @@ const showModal = (modal) => {
 /** Closes the open modal and gives focus back to where it was. */
 const hideModal = (modal) => {
   openModal = null;
-  sceneInputBlocked = false;
+  setBackgroundInert(false);
   controls.enabled = true;
 
   gsap.to(overlay, { opacity: 0, duration: 0.5 });
@@ -148,7 +172,7 @@ const hideModal = (modal) => {
     ease: "back.in(2)",
     onComplete: () => {
       modal.style.display = "none";
-      overlay.style.display = "none";
+      if (!openModal) overlay.style.display = "none";
     },
   });
 
@@ -215,7 +239,7 @@ manager.onLoad = () => {
     loadingScreen.classList.add("is-entering");
 
     if (withSound) {
-      backgroundMusic.play();
+      if (!backgroundMusic.playing()) backgroundMusic.play();
     } else {
       setMuted(true);
     }
@@ -246,7 +270,8 @@ function playReveal() {
         duration: 1.2,
         ease: "back.in(1.8)",
         onComplete: () => {
-          sceneInputBlocked = false;
+          hasRevealed = true;
+          setBackgroundInert(false);
           playIntroAnimation();
           loadingScreen.remove();
         },
@@ -263,18 +288,20 @@ function playIntroAnimation() {
   });
 
   popInObjects.forEach((object, index) => {
+    const { x, y, z } = object.userData.initialScale;
     timeline.to(
       object.scale,
-      { x: 1, y: 1, z: 1, duration: 0.8 },
+      { x, y, z, duration: 0.8 },
       index === 0 ? 0 : "-=0.65"
     );
   });
 
   letters.filter(Boolean).forEach((letter) => {
+    const { x, y, z } = letter.userData.initialScale;
     const restY = letter.userData.initialPosition.y;
     timeline
       .to(letter.position, { y: restY + 0.3 }, "-=0.25")
-      .to(letter.scale, { x: 1, y: 1, z: 1 }, "<")
+      .to(letter.scale, { x, y, z }, "<")
       .to(letter.position, { y: restY }, ">-0.2");
   });
 }
@@ -322,22 +349,6 @@ const islandMaterials = Object.fromEntries(
     }),
   ])
 );
-
-/** Unlit video material for a mesh named `*Screen*`, created on first use. */
-function createScreenMaterial() {
-  const video = document.createElement("video");
-  video.src = "/textures/video/phone.mp4";
-  video.loop = true;
-  video.muted = true;
-  video.playsInline = true;
-  video.autoplay = true;
-  video.play();
-
-  const texture = new THREE.VideoTexture(video);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.flipY = false;
-  return new THREE.MeshBasicMaterial({ map: texture });
-}
 
 /**  -------------------------- Falling petals -------------------------- */
 
@@ -397,16 +408,6 @@ function fitPetalsToCanopy(canopy) {
 
 /**  -------------------------- Model -------------------------- */
 
-/** Mesh-name prefixes that scale in during the intro. */
-const objectsWithIntroAnimations = [
-  "Phone",
-  "Paper_Airplane",
-  "Writing_",
-  "Robot_Hand",
-  "Stone_",
-  "Minecraft_Block",
-];
-
 /** Name letters in N order; the count comes from the model. */
 const letters = [];
 /** Props that pop in before the letters. */
@@ -414,10 +415,9 @@ const popInObjects = [];
 /** Interactive meshes that get hitboxes once the intro ends. */
 const objectsNeedingHitboxes = [];
 
+/** Props flagged `intro` in the interactions table scale in during the intro. */
 function hasIntroAnimation(objectName) {
-  return objectsWithIntroAnimations.some((animatedName) =>
-    objectName.includes(animatedName)
-  );
+  return Boolean(findInteraction(objectName)?.intro);
 }
 
 loader.load("/models/island.glb", (glb) => {
@@ -442,12 +442,8 @@ loader.load("/models/island.glb", (glb) => {
       fitPetalsToCanopy(child);
     }
 
-    if (child.name.includes("Screen")) {
-      child.material = createScreenMaterial();
-    } else {
-      const atlas = ATLASES.find((name) => child.name.includes(name));
-      if (atlas) child.material = islandMaterials[atlas];
-    }
+    const atlas = ATLASES.find((name) => child.name.includes(name));
+    if (atlas) child.material = islandMaterials[atlas];
 
     if (child.name.includes("Raycaster")) {
       if (letterIndex || hasIntroAnimation(child.name)) {
@@ -487,6 +483,7 @@ function addHitbox(object) {
   hitbox.position.copy(center);
   hitbox.name = object.name + "_Hitbox";
   hitbox.userData.labelAnchor = new THREE.Vector3(center.x, box.max.y, center.z);
+  hitbox.userData.action = findInteraction(object.name);
 
   scene.add(hitbox);
   raycasterObjects.push(hitbox);
@@ -500,8 +497,7 @@ function createDelayedHitboxes() {
 
 /** Plays the click sound and runs the object's action: open a link or a modal. */
 function runInteraction(hitbox) {
-  const object = hitboxToObjectMap.get(hitbox);
-  const action = object && findInteraction(object.name);
+  const action = hitbox.userData.action;
   if (!action) return;
 
   clickSound.play();
@@ -566,7 +562,7 @@ function updateHover() {
 
   const hitbox = currentIntersects[0]?.object;
   if (!hitbox) {
-    clearHover();
+    if (currentHoveredObject) clearHover();
     return;
   }
 
@@ -586,13 +582,12 @@ const labelPosition = new THREE.Vector3();
 
 /** Keeps the hover label above the hovered object, or hides it. */
 function updateLabel() {
-  if (!currentHoveredObject || sceneInputBlocked) {
+  if (!currentHoveredObject || isSceneInputBlocked()) {
     objectLabel.classList.remove("is-visible");
     return;
   }
 
-  const object = hitboxToObjectMap.get(currentHoveredObject);
-  const text = findInteraction(object.name)?.label ?? "";
+  const text = currentHoveredObject.userData.action?.label ?? "";
   if (objectLabel.textContent !== text) objectLabel.textContent = text;
 
   labelPosition.copy(currentHoveredObject.userData.labelAnchor).project(camera);
@@ -605,6 +600,8 @@ function updateLabel() {
 /** Where the last press started, so a camera drag does not count as a click. */
 const pressPoint = { x: 0, y: 0 };
 let pressMoved = false;
+/** True while a finger is down, so an orbit drag does not sweep hover across objects. */
+let touchPressActive = false;
 /** First tap on touch selects an object; a second tap on the same one runs it. */
 let lastTappedHitbox = null;
 
@@ -618,7 +615,17 @@ canvas.addEventListener("pointerdown", (e) => {
   pressPoint.x = e.clientX;
   pressPoint.y = e.clientY;
   pressMoved = false;
+  touchPressActive = e.pointerType === "touch";
 });
+
+/** Ends a touch press; after a drag the touch point leaves the scene so nothing stays hovered. */
+function endTouchPress(e) {
+  if (e.pointerType !== "touch") return;
+  touchPressActive = false;
+  if (pressMoved) pointer.set(10, 10);
+}
+canvas.addEventListener("pointerup", endTouchPress);
+canvas.addEventListener("pointercancel", endTouchPress);
 
 canvas.addEventListener("pointermove", (e) => {
   if (e.pointerType === "mouse") setPointer(e);
@@ -632,7 +639,7 @@ canvas.addEventListener("pointerleave", (e) => {
 });
 
 canvas.addEventListener("click", () => {
-  if (sceneInputBlocked || pressMoved) return;
+  if (isSceneInputBlocked() || pressMoved) return;
   const hitbox = currentIntersects[0]?.object;
   if (hitbox) runInteraction(hitbox);
 });
@@ -642,12 +649,14 @@ canvas.addEventListener(
   (e) => {
     // Stops the browser's emulated click, which would run the action a second time.
     e.preventDefault();
-    if (sceneInputBlocked || pressMoved) return;
+    if (isSceneInputBlocked() || pressMoved) return;
 
     raycaster.setFromCamera(pointer, camera);
     const hitbox = raycaster.intersectObjects(raycasterObjects)[0]?.object;
     if (hitbox && hitbox === lastTappedHitbox) {
       lastTappedHitbox = null;
+      // Move the touch point away so the label does not linger after the action.
+      pointer.set(10, 10);
       runInteraction(hitbox);
     } else {
       lastTappedHitbox = hitbox ?? null;
@@ -740,7 +749,7 @@ const render = () => {
 
   controls.update();
 
-  if (!sceneInputBlocked) updateHover();
+  if (!isSceneInputBlocked() && !touchPressActive) updateHover();
   updateLabel();
 
   renderer.render(scene, camera);

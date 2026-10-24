@@ -46,11 +46,10 @@ test("name letters are numbered 1 to 3 with no gaps", () => {
   assert.deepEqual(numbers, [1, 2, 3]);
 });
 
-test("every mesh uses exactly one atlas, or is a video screen", () => {
-  const wrong = meshNames.filter((name) => {
-    const atlases = ["First", "Second"].filter((atlas) => name.includes(atlas));
-    return atlases.length !== 1 && !name.includes("Screen");
-  });
+test("every mesh uses exactly one atlas", () => {
+  const wrong = meshNames.filter(
+    (name) => ["First", "Second"].filter((atlas) => name.includes(atlas)).length !== 1
+  );
   assert.deepEqual(wrong, []);
 });
 

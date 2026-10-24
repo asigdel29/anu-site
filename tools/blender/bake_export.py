@@ -148,7 +148,7 @@ def write_webp(png_path, atlas, mode, size):
 
 def is_static(obj):
     """Static meshes are joined into one mesh per atlas; interactive ones and the canopy stay separate."""
-    return not any(token in obj.name for token in ("Raycaster", "Canopy", "Screen"))
+    return not any(token in obj.name for token in ("Raycaster", "Canopy"))
 
 
 def prepare_for_export():
@@ -211,13 +211,15 @@ def main():
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     prefs = bpy.context.preferences.addons["cycles"].preferences
-    prefs.compute_device_type = "METAL"
-    prefs.get_devices()
-    for device in prefs.devices:
-        device.use = True
-    scene.cycles.device = "GPU"
+    try:
+        prefs.compute_device_type = "METAL"
+        prefs.get_devices()
+        for device in prefs.devices:
+            device.use = True
+        scene.cycles.device = "GPU"
+    except TypeError:
+        print("Metal is not available; baking on the CPU")
     scene.cycles.samples = args.samples
-    scene.render.bake.margin = 16
     # Same view transform for both modes, so the shader's gamma step reproduces what Blender shows.
     scene.view_settings.view_transform = "Standard"
     scene.view_settings.look = "None"

@@ -14,7 +14,8 @@ export default defineConfig({
   webServer: process.env.BASE_URL
     ? undefined
     : {
-        command: "npm run build && npx vite preview --port 4173 --strictPort",
+        // CI builds in its own step, so only serve there.
+        command: `${process.env.CI ? "" : "npm run build && "}npx vite preview --port 4173 --strictPort`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
       },

@@ -67,10 +67,12 @@ def music_box(seconds=32, bpm=72, seed=29):
             t = i / RATE
             bell = math.sin(2 * math.pi * frequency * t) + 0.3 * math.sin(2 * math.pi * frequency * 2.01 * t)
             out[(start + i) % total] += loudness * bell * math.exp(-t * 2.2) * min(1.0, t * 400)
+    # Round the pad notes to a whole number of cycles per loop, so the loop point has no click.
+    low, fifth = (round(f * seconds) / seconds for f in (146.83, 220.0))
     for i in range(total):
         t = i / RATE
         swell = 0.5 + 0.5 * math.sin(2 * math.pi * t / seconds * 2)
-        out[i] += 0.05 * swell * (math.sin(2 * math.pi * 146.83 * t) + 0.6 * math.sin(2 * math.pi * 220.0 * t))
+        out[i] += 0.05 * swell * (math.sin(2 * math.pi * low * t) + 0.6 * math.sin(2 * math.pi * fifth * t))
     peak = max(abs(s) for s in out)
     return [s / peak * 0.7 for s in out]
 
