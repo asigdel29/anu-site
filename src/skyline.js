@@ -56,8 +56,8 @@ function createBuildings(uniforms, { footprint, shape, look }) {
   const geometry = new InstancedBufferGeometry().copy(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0));
   geometry.setAttribute("aFootprint", new InstancedBufferAttribute(footprint, 4));
   geometry.setAttribute("aShape", new InstancedBufferAttribute(shape, 4));
-  geometry.setAttribute("aLook", new InstancedBufferAttribute(look, 2));
-  geometry.instanceCount = look.length / 2;
+  geometry.setAttribute("aLook", new InstancedBufferAttribute(look, 4));
+  geometry.instanceCount = look.length / 4;
 
   const material = new ShaderMaterial({
     uniforms: {
