@@ -6,7 +6,7 @@ Run from the repo root:
 
 Every object already has its final name (see props.py), so later art can replace meshes
 one at a time without touching the site code. Units are metres, Z is up, and the grass
-top sits at z = 0.
+top sits at z = 0. Clouds are not baked: src/clouds.js draws and moves them at runtime.
 """
 
 import math
@@ -112,25 +112,6 @@ def build_tree(col):
     canopy.shadow_terminator_geometry_offset = 0.8  # no dark bands on smooth low-poly clumps
 
 
-def build_clouds(col):
-    cloud = principled("Cloud", "#F4F6FA", roughness=1.0)
-    placements = [(10, 10.5, 2.0), (80, 11.5, -2.5), (150, 10.0, 1.0), (200, 12.0, -4.5), (250, 9.5, 3.2)]
-    bm = bmesh.new()
-    for angle, reach, height in placements:
-        center = Vector((math.cos(math.radians(angle)) * reach, math.sin(math.radians(angle)) * reach, height))
-        along = Vector((-math.sin(math.radians(angle)), math.cos(math.radians(angle)), 0))
-        for _ in range(5):
-            offset = center + along * rng.uniform(-1.4, 1.4) + Vector((0, 0, rng.uniform(-0.2, 0.4)))
-            verts = add_sphere(bm, rng.uniform(0.8, 1.3), center=offset, subdivisions=2)
-            for v in verts:
-                v.co.z = max(v.co.z, offset.z - 0.35)
-    for face in bm.faces:
-        face.smooth = True
-    clouds = mesh_object("Clouds", bm, col, [cloud])
-    clouds["texel_weight"] = 0.25
-    clouds.shadow_terminator_geometry_offset = 0.8
-
-
 def build_lantern(col, night_col):
     glow = principled("Lantern_Glow", "#FFD38A", emission="#FFB454", strength=4.0)
     metal = principled("Lantern_Cap", "#2E2940")
@@ -194,7 +175,6 @@ def main():
 
     build_island(set_first)
     build_tree(set_first)
-    build_clouds(set_first)
     build_lantern(set_first, night)
     build_props(set_second)
     build_lighting(day, night, preview)
