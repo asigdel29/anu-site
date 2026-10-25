@@ -3,7 +3,7 @@
 import { Vector3 } from "three";
 
 import { damp, prefersReducedMotion } from "./motion.js";
-import { isMobile } from "./scene.js";
+import { canvas, isMobile } from "./scene.js";
 import { STOPS, clampProgress, tourPose } from "./tour.js";
 
 /** Phones are narrow, so the camera steps back for the props to fit across the screen. */
@@ -22,17 +22,19 @@ let started = false;
 /** The camera's tour progress; it eases toward the scroll position. */
 let shown = 0;
 /** Cached on resize, so the frame loop never reads layout. */
-let scrollRange = 1;
+let stopHeight = 1;
 let viewWidth = 1;
 let viewHeight = 1;
 
 function measure() {
-  scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-  viewWidth = window.innerWidth;
-  viewHeight = window.innerHeight;
+  // One stop per section: its height, not the window's, sets where each stop snaps. They differ
+  // on phones once the address bar hides.
+  stopHeight = Math.max(1, document.querySelector(".tour-stop").offsetHeight);
+  viewWidth = canvas.clientWidth;
+  viewHeight = canvas.clientHeight;
 }
 
-const scrollProgress = () => (window.scrollY / scrollRange) * (STOPS.length - 1);
+const scrollProgress = () => window.scrollY / stopHeight;
 
 /** Puts the camera on the tour path; the boot uses it before the first frame. */
 export function placeCamera(camera, progress = shown) {
