@@ -56,7 +56,7 @@ test("island loads and every section opens from the nav", async ({ page }) => {
   await about.getByRole("button", { name: "close" }).click();
   await expect(about).toBeHidden();
 
-  await nav.getByRole("button", { name: "contact" }).click();
+  await nav.getByRole("button", { name: "say hey" }).click();
   const contact = page.getByRole("dialog", { name: "say hey" });
   await expect(
     contact.getByRole("link", { name: /sigdelanubhav@gmail\.com/ })
