@@ -9,6 +9,7 @@ import {
   ShaderMaterial,
 } from "three";
 
+import { seeded } from "./random.js";
 import { windVector } from "./weather.js";
 import vertexShader from "./shaders/clouds/vertex.glsl?raw";
 import fragmentShader from "./shaders/clouds/fragment.glsl?raw";
@@ -16,15 +17,6 @@ import fragmentShader from "./shaders/clouds/fragment.glsl?raw";
 const MAX_CLOUDS = 12;
 const PUFFS_PER_CLOUD = 6;
 const FIELD = 45;
-
-/** Small seeded random, so every visit shows the same sky layout. */
-function seeded(seed) {
-  let state = seed;
-  return () => {
-    state = (state * 1664525 + 1013904223) % 4294967296;
-    return state / 4294967296;
-  };
-}
 
 /** Builds the cloud field. Lanes keep at least 9 m from the island's centre line. */
 export function createClouds() {
