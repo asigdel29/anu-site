@@ -14,9 +14,9 @@ Every third-party asset on the site, with its license. Add a row for each new as
 
 ## Made for this site
 
-- The 3D island, tree, props, figure and baked textures: made in Blender from `tools/blender/build_blockout.py`.
+- The 3D island and its baked textures: made in Blender from `tools/blender/build_blockout.py`.
 - The music loop and click sound: synthesized by `tools/audio/make_sounds.py`.
-- The pixel-art New York skyline: drawn by `tools/skyline/make_skyline.py`.
+- The 3D New York: laid out by `src/city.js` and drawn by the shaders in `src/shaders/city/`. It uses no map data. The landmarks are simple shapes at their public heights, divided by 10.
 
 ## Inspiration
 
