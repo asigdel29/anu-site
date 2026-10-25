@@ -30,11 +30,23 @@ export const camera = new PerspectiveCamera(35, 1, 0.5, 800);
 /** Set by initScene(). */
 export let renderer;
 
+/** The canvas size last applied, so an unchanged size never reallocates the drawing buffer. */
+let appliedSize = "";
+
+/**
+ * Matches the drawing buffer to the canvas's CSS size. Phones fire resize each time the address
+ * bar moves; the canvas (100lvh tall) keeps its size then, so nothing is done.
+ */
 function fitToWindow() {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const size = `${width}x${height}@${window.devicePixelRatio}`;
+  if (size === appliedSize) return;
+  appliedSize = size;
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(width, height, false);
 }
 
 /**

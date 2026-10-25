@@ -84,9 +84,13 @@ a {
   outline-offset: 3px;
 }
 
+/* As tall as the viewport with the address bar hidden, so the bar moving never resizes it. */
 #experience {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100lvh;
 }
 
 #experience-canvas {
@@ -111,9 +115,11 @@ a {
     animation-delay: 0s !important;
     transition-duration: 1ms !important;
   }
-  /* Endless loops (the ball, the floating capsule faces) stop instead of flickering at 1 ms. */
+  /* Endless loops (the balls, the floating capsule faces, the markers) stop instead of flickering at 1 ms. */
   .loading-screen::before,
-  .is-collapsed .island-face {
+  .is-collapsed .island-face,
+  .marker-bubble,
+  .scroll-ball {
     animation: none !important;
   }
 }
@@ -565,9 +571,19 @@ a {
   z-index: 2;
   width: var(--open-w);
   height: var(--open-h);
+  /* Only the island takes touches; the empty zone must not block the scene below. */
+  pointer-events: none;
+}
+
+/* With a mouse, the whole open-size zone is the hover target. */
+@media (hover: hover) {
+  .dock {
+    pointer-events: auto;
+  }
 }
 
 .island {
+  pointer-events: auto;
   position: absolute;
   overflow: hidden;
   width: var(--open-w);
@@ -996,11 +1012,17 @@ body:has(.loading-screen, .modal.is-open) {
   scroll-snap-stop: always;
 }
 
+/* The last stop fills the largest viewport, so its snap point is reachable however tall the window is. */
+.tour-stop:last-child {
+  height: 100lvh;
+}
+
 /* Marker bubbles over the props, like map pins: glossy badge, label, ground ring. */
+/* Above the docks: the nav's hover zone reaches down to where a marker can sit. */
 .markers {
   position: fixed;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   pointer-events: none;
 }
 
@@ -1140,12 +1162,20 @@ body:has(.loading-screen, .modal.is-open) {
 .tour-rail-dots {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px 8px;
+  padding: 6px 1px;
   border-radius: 999px;
 }
 
+/* Each button is a 24 px tap target; the dot inside is drawn by ::before. */
 .tour-rail-dots button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+.tour-rail-dots button::before {
+  content: "";
   width: 10px;
   height: 10px;
   background: var(--chip);
@@ -1154,7 +1184,7 @@ body:has(.loading-screen, .modal.is-open) {
   transition: scale 0.4s var(--spring), background 0.2s;
 }
 
-.tour-rail-dots button[aria-current] {
+.tour-rail-dots button[aria-current]::before {
   background: var(--accent);
   border-color: var(--marker-rim);
   scale: 1.5;

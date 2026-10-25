@@ -142,11 +142,14 @@ def fill_gaps(png_path):
     # the mesh, so it bakes dark. Repaint it from the pixels just inside. A part too thin to
     # have an inside keeps its own pixels.
     baked = pixels[..., 3] > 0
+    if not baked.any():
+        raise RuntimeError(f"{png_path.name}: the bake wrote no pixels")
     inside = baked & np.logical_and.reduce([np.roll(baked, shift, axis=(0, 1)) for shift in shifts])
     colour = sum(np.roll(pixels * inside[..., None], shift, axis=(0, 1)) for shift in shifts)
     count = sum(np.roll(inside, shift, axis=(0, 1)).astype(np.float32) for shift in shifts)
     ring = baked & ~inside & (count > 0)
     pixels[ring, :3] = colour[ring, :3] / count[ring, None]
+    # np.roll wraps at the atlas edges; that only colours unbaked pixels, which nothing samples.
     while not pixels[..., 3].all():
         # Each pass grows the baked area by one pixel, averaging the baked neighbours.
         neighbours = [np.roll(pixels, shift, axis=(0, 1)) for shift in shifts]

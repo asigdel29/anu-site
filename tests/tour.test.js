@@ -14,12 +14,23 @@ const pose = (progress, zoom = 1) => {
   return { position, target };
 };
 
-/** Marker anchors from the mesh pack header that tools/blender/bake_export.py writes. */
-function bakedAnchors() {
+/** The mesh pack header that tools/blender/bake_export.py writes. */
+function packHeader() {
   const pack = readFileSync(new URL("../public/models/island.bin", import.meta.url));
   const headerLength = pack.readUInt32LE(0);
-  return JSON.parse(pack.subarray(4, 4 + headerLength).toString()).anchors;
+  return JSON.parse(pack.subarray(4, 4 + headerLength).toString());
 }
+
+/** A node's bounds in site space, plus a margin, from the header (rotations are identity). */
+function nodeBounds(name, margin) {
+  const node = packHeader().nodes.find((n) => n.name === name);
+  const corner = (key) => node[key].map((v, axis) => node.position[axis] + v * node.scale[axis]);
+  const [min, max] = [corner("min"), corner("max")];
+  return { min: min.map((v) => v - margin), max: max.map((v) => v + margin) };
+}
+
+const inside = ({ x, y, z }, { min, max }) =>
+  x > min[0] && x < max[0] && y > min[1] && y < max[1] && z > min[2] && z < max[2];
 
 test("the camera sits exactly on each stop", () => {
   STOPS.forEach((stop, index) => {
@@ -43,20 +54,20 @@ test("progress outside the tour holds the first and the last stop", () => {
 });
 
 test("the camera never enters the canopy or the island, on desktop and on phones", () => {
+  // Boxes around the baked canopy and the rest of the island (grass, pillars, trunk, props).
+  const canopy = nodeBounds("Canopy", 0.3);
+  const island = nodeBounds("First", 0.3);
   for (const zoom of [1, 1.4]) {
     for (let progress = 0; progress <= STOPS.length - 1; progress += 0.01) {
-      const { x, y, z } = pose(progress, zoom).position;
-      const fromAxis = Math.hypot(x, z);
-      // The canopy reaches about 5.2 m out, between about 3.2 m and 6.5 m up.
-      assert.ok(!(fromAxis < 5.4 && y > 3 && y < 7), `canopy at ${progress.toFixed(2)}: ${fromAxis.toFixed(2)} m, ${y.toFixed(2)} m up`);
-      // The island block is 6.1 m square, from the grass down to about 5 m below it.
-      assert.ok(!(Math.abs(x) < 3.4 && Math.abs(z) < 3.4 && y < 0.5), `island at ${progress.toFixed(2)}`);
+      const position = pose(progress, zoom).position;
+      assert.ok(!inside(position, canopy), `canopy at progress ${progress.toFixed(2)}`);
+      assert.ok(!inside(position, island), `island at progress ${progress.toFixed(2)}`);
     }
   }
 });
 
 test("each prop stop looks at its prop, below the marker anchor", () => {
-  const anchors = bakedAnchors();
+  const { anchors } = packHeader();
   for (const stop of STOPS.filter((s) => s.marker)) {
     const anchor = anchors[stop.id];
     assert.ok(anchor, `no anchor for ${stop.id}`);

@@ -5,7 +5,7 @@ import { Vector3 } from "three";
 
 import { showModal } from "./modals.js";
 import { damp, prefersReducedMotion } from "./motion.js";
-import { isMobile } from "./scene.js";
+import { canvas, isMobile } from "./scene.js";
 import { playClick } from "./toggles.js";
 import { STOPS, clampProgress, nearestStop, tourPose } from "./tour.js";
 
@@ -37,17 +37,19 @@ let shown = 0;
 let currentStop = -1;
 let visibleMarker = null;
 /** Cached on resize, so the frame loop never reads layout. */
-let scrollRange = 1;
+let stopHeight = 1;
 let viewWidth = 1;
 let viewHeight = 1;
 
 function measure() {
-  scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-  viewWidth = window.innerWidth;
-  viewHeight = window.innerHeight;
+  // One stop per section: its height, not the window's, sets where each stop snaps. They differ
+  // on phones once the address bar hides.
+  stopHeight = Math.max(1, document.querySelector(".tour-stop").offsetHeight);
+  viewWidth = canvas.clientWidth;
+  viewHeight = canvas.clientHeight;
 }
 
-const scrollProgress = () => (window.scrollY / scrollRange) * (STOPS.length - 1);
+const scrollProgress = () => window.scrollY / stopHeight;
 
 /** Puts the camera on the tour path; the boot uses it before the first frame. */
 export function placeCamera(camera, progress = shown) {
@@ -76,6 +78,8 @@ function placeMarker(camera) {
     visibleMarker = id;
   }
   if (!id) return;
+  // lookAt sets the new rotation after it updates the matrices, so update them before projecting.
+  camera.updateMatrixWorld();
   point.copy(anchors.get(id)).project(camera);
   const x = ((point.x + 1) / 2) * viewWidth;
   const y = ((1 - point.y) / 2) * viewHeight;
