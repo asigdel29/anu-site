@@ -21,7 +21,6 @@ export function createPrecipitation(count, pixelRatio) {
   const geometry = new BufferGeometry();
   geometry.setAttribute("position", new BufferAttribute(positions, 3));
   geometry.setAttribute("aSeed", new BufferAttribute(seeds, 1));
-  geometry.setDrawRange(0, 0);
 
   const material = new ShaderMaterial({
     uniforms: {
@@ -44,7 +43,9 @@ export function createPrecipitation(count, pixelRatio) {
 
 /** Shows rain, snow or nothing; wind (degrees from, mph) tilts the fall. */
 export function setPrecipitation({ points, material, count }, { precipitation, windDegrees, windMph }) {
-  points.geometry.setDrawRange(0, precipitation === "none" ? 0 : count);
+  // Hide it in dry weather, so the renderer skips the draw call instead of drawing nothing.
+  points.visible = precipitation !== "none";
+  points.geometry.setDrawRange(0, count);
   material.uniforms.uSnow.value = precipitation === "snow" ? 1 : 0;
   material.uniforms.uWind.value = windVector(windDegrees, windMph * 0.02);
 }
