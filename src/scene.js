@@ -41,11 +41,11 @@ function fitToWindow() {
  */
 export async function initScene() {
   const context = canvas.getContext("webgl2", { antialias: true });
-  await yieldToMain();
+  await yieldToMain("renderer");
   renderer = new WebGLRenderer({ canvas, context });
   fitToWindow();
   window.addEventListener("resize", fitToWindow);
-  await yieldToMain();
+  await yieldToMain("controls");
 
   // ponytail: camera numbers are tuned by eye for the blockout; retune after the final model.
   controls = new OrbitControls(camera, canvas);
@@ -71,7 +71,7 @@ export async function initScene() {
 export async function warmUp(objects) {
   for (const object of objects) {
     renderer.render(object, camera);
-    await yieldToMain();
+    await yieldToMain(`warm up after ${object.name || object.type}`);
   }
 }
 
@@ -87,7 +87,11 @@ export function startLoop(onFrame) {
   });
 }
 
-/** Resolves on a fresh task, so long startup work never blocks the page in one piece. */
-export function yieldToMain() {
+/**
+ * Resolves on a fresh task, so long startup work never blocks the page in one piece.
+ * nextStep names the work that follows; the perf test uses these marks to explain long tasks.
+ */
+export function yieldToMain(nextStep) {
+  if (nextStep) performance.mark(nextStep);
   return new Promise((resolve) => setTimeout(resolve, 0));
 }

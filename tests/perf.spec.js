@@ -27,7 +27,7 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
     })
   );
   await browser.startTracing(page, {
-    categories: ["devtools.timeline", "disabled-by-default-devtools.timeline"],
+    categories: ["devtools.timeline", "disabled-by-default-devtools.timeline", "blink.user_timing"],
   });
   await page.goto("/");
   await page.getByRole("button", { name: "enter without sound" }).click({ timeout: 30_000 });
@@ -80,7 +80,11 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
       .sort((x, y) => y.dur - x.dur)
       .slice(0, 5)
       .map((e) => `${e.name}${e.args?.data?.functionName ? `(${e.args.data.functionName})` : ""} ${(e.dur / 1000).toFixed(1)}`);
-    console.log(`  ${task.work.toFixed(1)} ms: ${parts.join(", ")}`);
+    // The last boot mark before the task names the step it belongs to.
+    const step = events
+      .filter((e) => e.cat?.includes("user_timing") && e.ts <= task.ts + task.dur)
+      .reduce((latest, e) => (!latest || e.ts > latest.ts ? e : latest), null);
+    console.log(`  ${task.work.toFixed(1)} ms: ${parts.join(", ")}${step ? ` [after mark: ${step.name}]` : ""}`);
   }
 
   const slow = tasks

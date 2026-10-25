@@ -115,7 +115,7 @@ export async function loadIsland({ scene, camera, renderer, yieldToMain }) {
 
   for (const texture of textures) {
     renderer.initTexture(texture);
-    await yieldToMain();
+    await yieldToMain("next texture upload");
   }
 
   scene.add(island);

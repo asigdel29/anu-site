@@ -12,7 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#A9D6F2" />
     <link rel="stylesheet" href="./src/style.css" />
-    <link rel="preload" href="/fonts/space-grotesk-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 
     <meta property="og:locale" content="en_US" />
     <meta property="og:type" content="website" />
@@ -45,6 +45,7 @@
   </head>
   <body class="light-theme">
     <div class="loading-screen">
+      <p class="loading-title" aria-hidden="true">anu sigdel<span>of new york</span></p>
       <p class="loading-text">hey, give the petals a second</p>
       <button class="loading-screen-button" disabled>loading...</button>
       <button class="no-sound-button" hidden>enter without sound</button>
@@ -95,6 +96,17 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" /><path d="m10 8 4 4-4 4" /></svg>
       </button>
     </nav>
+
+    <h1 class="site-title">anu sigdel<span>of new york</span></h1>
+
+    <section class="hero-card" aria-label="introduction" inert>
+      <h2 class="hero-headline">building agents, weird machines, and things people actually use</h2>
+      <p>i'm anu, building @ lora. tap anything on the island, or start here.</p>
+      <button type="button" class="hero-link" data-modal="about">
+        get to know me
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" /><path d="m10 8 4 4-4 4" /></svg>
+      </button>
+    </section>
 
     <p class="sky-status" inert>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
@@ -204,7 +216,7 @@
           <p class="small-text">
             built on andrew woan's
             <a href="https://github.com/andrewwoan/sooahs-room-folio" target="_blank" rel="noopener noreferrer">room folio</a>
-            tutorial (mit), inspired by bruno simon's room. fonts: space grotesk and inter (ofl).
+            tutorial (mit), inspired by bruno simon's room. fonts: instrument serif, inter and space grotesk (ofl).
             icons: simple icons (cc0) and lucide (isc). live new york weather by
             <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">open-meteo.com</a>.
             the island, sounds and textures are my own.

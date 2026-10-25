@@ -5,18 +5,16 @@ const timeText = document.querySelector(".status-time");
 const weatherText = document.querySelector(".status-weather");
 const note = document.querySelector(".weather-note");
 
-const newYorkClock = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: "America/New_York",
-});
-
-function tick() {
-  timeText.textContent = newYorkClock.format(new Date()).toLowerCase();
-}
-
-/** Shows New York time now and keeps it current. */
+/** Shows New York time now and keeps it current. The formatter is built here, not at import. */
 export function startClock() {
+  const newYorkClock = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/New_York",
+  });
+  const tick = () => {
+    timeText.textContent = newYorkClock.format(new Date()).toLowerCase();
+  };
   tick();
   setInterval(tick, 30_000);
 }
