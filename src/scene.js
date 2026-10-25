@@ -41,6 +41,7 @@ function fitToWindow() {
  * any two of them together pass 20 ms.
  */
 export async function initScene() {
+  await yieldToMain("context");
   const context = canvas.getContext("webgl2", { antialias: true });
   await yieldToMain("renderer");
   renderer = new WebGLRenderer({ canvas, context });
