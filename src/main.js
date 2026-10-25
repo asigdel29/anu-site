@@ -90,11 +90,13 @@ async function boot() {
   skyline = await skylineRequest;
   scene.add(skyline.group);
   themedMaterials.push(skyline.material);
+  // Compile the city shaders in the background; a first draw would compile them all in one task.
+  await renderer.compileAsync(skyline.group, camera, scene);
   await yieldToMain("skyline");
 
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
-  await warmUp([...island.children, clouds.mesh, precipitation.points, skyline.group]);
+  await warmUp([...island.children, clouds.mesh, precipitation.points, ...skyline.group.children]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
