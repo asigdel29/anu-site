@@ -1012,8 +1012,6 @@ body:has(.loading-screen, .modal.is-open) {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  /* explore.js sets translate to the anchor; this puts the ground ring on it. */
-  transform: translate(-50%, -100%);
   visibility: hidden;
   pointer-events: auto;
   transition: visibility 0s 0.4s;

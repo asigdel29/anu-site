@@ -77,7 +77,11 @@ function placeMarker(camera) {
   }
   if (!id) return;
   point.copy(anchors.get(id)).project(camera);
-  markers.get(id).style.translate = `${((point.x + 1) / 2) * viewWidth}px ${((1 - point.y) / 2) * viewHeight}px`;
+  const x = ((point.x + 1) / 2) * viewWidth;
+  const y = ((1 - point.y) / 2) * viewHeight;
+  // One transform, not the translate property: Safari's accessibility frames ignore translate.
+  // The second step puts the marker's ground ring on the anchor.
+  markers.get(id).style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
 }
 
 /** Moves the camera toward the scroll position; call it every frame once the tour has started. */
