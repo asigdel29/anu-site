@@ -1,16 +1,18 @@
-"""Bakes the day and night atlases of blender/island.blend into the WebP files the site loads.
+"""Bakes the day and night atlases of blender/island.blend and exports the mesh pack the site loads.
 
 Run from the repo root:
     /Applications/Blender.app/Contents/MacOS/Blender -b blender/island.blend \
         --python tools/blender/bake_export.py -- --size 4096 --samples 1024
 
 Outputs:
+    public/models/island.bin
     public/textures/island/{day,night}/{first,second}_{desktop,mobile}.webp
 
 Rules this script keeps:
 - Each atlas set gets one shared UV map named "Bake". If any object lacks it, the whole set is
   unwrapped again and the .blend is saved, so later runs reuse the same layout.
 - Day and night bake from the same UVs in the same run, so the two textures always line up.
+- Export prep (joins, stripped materials) happens in memory only; the .blend is never saved after it.
 """
 
 import argparse
@@ -22,14 +24,17 @@ from pathlib import Path
 
 import bpy
 
+sys.path.insert(0, str(Path(__file__).parent))
+from mesh_pack import BAKE_UV, export_mesh_pack  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "blender" / "out"
+MESH_PATH = ROOT / "public" / "models" / "island.bin"
 TEXTURE_DIR = ROOT / "public" / "textures" / "island"
 
 # Atlas name -> collection that holds its objects. Atlas names are also mesh-name tokens.
 SETS = {"First": "Set_First", "Second": "Set_Second"}
 MOBILE_MAX = 2048
-BAKE_UV = "Bake"
 
 
 def parse_args():
@@ -143,6 +148,36 @@ def write_webp(png_path, atlas, mode, size):
                     str(png_path), "-o", str(out_dir / f"{stem}_mobile.webp")], check=True)
 
 
+def is_static(obj):
+    """Static meshes are joined into one mesh per atlas; interactive ones and the canopy stay separate."""
+    return not any(token in obj.name for token in ("Raycaster", "Canopy"))
+
+
+def prepare_for_export():
+    """Joins static meshes per atlas, keeps only the Bake UV map and strips materials (in memory only)."""
+    exported = []
+    for atlas in SETS:
+        objects = set_objects(atlas)
+        static = [o for o in objects if is_static(o)]
+        if static:
+            select_only(static)
+            bpy.ops.object.join()
+            joined = bpy.context.view_layer.objects.active
+            joined.name = atlas
+            joined.data.name = atlas
+        exported += set_objects(atlas)
+
+    for obj in exported:
+        mesh = obj.data
+        for layer in [l for l in mesh.uv_layers if l.name != BAKE_UV]:
+            mesh.uv_layers.remove(layer)
+        mesh.materials.clear()
+
+    select_only(exported)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    return exported
+
+
 def main():
     args = parse_args()
     if not shutil.which("cwebp"):
@@ -174,6 +209,9 @@ def main():
             write_webp(png_path, atlas, mode, args.size)
             print(f"baked {atlas} {mode}")
 
+    exported = prepare_for_export()
+    export_mesh_pack(exported, MESH_PATH)
+    print(f"exported {MESH_PATH} ({MESH_PATH.stat().st_size // 1024} KB)")
 
 
 main()
