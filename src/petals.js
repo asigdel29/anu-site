@@ -42,6 +42,8 @@ export function createPetals(count, pixelRatio) {
       uSize: { value: 220 },
       uPixelRatio: { value: pixelRatio },
       uMixRatio: { value: 0 },
+      // Drift per metre of fall, set from the live wind.
+      uWind: { value: { x: 0, y: 0 } },
     },
     vertexShader,
     fragmentShader,

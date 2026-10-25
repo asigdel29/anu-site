@@ -9,6 +9,7 @@ import {
   ShaderMaterial,
 } from "three";
 
+import { windVector } from "./weather.js";
 import vertexShader from "./shaders/clouds/vertex.glsl?raw";
 import fragmentShader from "./shaders/clouds/fragment.glsl?raw";
 
@@ -80,9 +81,7 @@ export function createClouds() {
 export function setCloudWeather({ mesh, material }, { cover, windDegrees, windMph, gloom }) {
   const visible = Math.round(Math.min(Math.max(cover, 0), 1) * MAX_CLOUDS);
   mesh.geometry.instanceCount = Math.max(visible, 2) * PUFFS_PER_CLOUD;
-  // Wind comes *from* windDegrees (0 = north), so clouds move the opposite way.
-  const heading = ((windDegrees + 180) * Math.PI) / 180;
-  material.uniforms.uWind.value = { x: Math.sin(heading), y: -Math.cos(heading) };
+  material.uniforms.uWind.value = windVector(windDegrees, 1);
   material.uniforms.uSpeed.value = 0.4 + windMph * 0.12;
   material.uniforms.uGloom.value = gloom;
 }
