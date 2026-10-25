@@ -7,6 +7,7 @@ uniform float uFall;
 uniform float uRadius;
 uniform float uSize;
 uniform float uPixelRatio;
+uniform vec2 uWind;
 
 attribute float aSeed;
 
@@ -23,6 +24,7 @@ void main()
     float sway = 0.2 + t * 0.9;
     petal.x += sin(uTime * (0.6 + aSeed) + aSeed * 40.0) * sway;
     petal.z += cos(uTime * (0.5 + aSeed * 0.7) + aSeed * 20.0) * sway;
+    petal.xz += uWind * t * uFall;
 
     vec4 viewPosition = modelViewMatrix * vec4(petal, 1.0);
     gl_Position = projectionMatrix * viewPosition;

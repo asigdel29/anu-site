@@ -1,12 +1,15 @@
 // Entry point for anu's cherry blossom island: boots the scene in small steps, then wires
 // the loading screen, the intro, object clicks, dialogs and toggles.
 
+import { Color } from "three";
+
 import { createClouds, setCloudWeather } from "./clouds.js";
 import { revealIsland, waitForEnter } from "./loading.js";
 import { islandMaterials, loadIsland } from "./island.js";
 import { isModalOpen, setBackgroundInert, showModal } from "./modals.js";
 import { prefersReducedMotion } from "./motion.js";
 import { createPetals, fitPetalsToCanopy } from "./petals.js";
+import { createPrecipitation, setPrecipitation } from "./precipitation.js";
 import {
   addHitbox,
   getHoveredObject,
@@ -29,15 +32,20 @@ import {
   yieldToMain,
 } from "./scene.js";
 import { playClick, setMuted, setNight, startMusic, stepTheme, theme } from "./toggles.js";
-import { fetchWeather } from "./weather.js";
+import { fetchWeather, windVector } from "./weather.js";
 
 /** How often the live weather refreshes. */
 const WEATHER_REFRESH_MS = 15 * 60 * 1000;
+/** Sky colours in the worst weather; gloom blends toward them. */
+const GLOOM_SKY = { day: new Color("#9aa5b1"), night: new Color("#15151f") };
+/** Current sky colours for day and night, after the weather's gloom. */
+const sky = { day: SKY_COLORS.day.clone(), night: SKY_COLORS.night.clone() };
 
 const label = document.querySelector(".object-label");
 /** Created once the renderer exists (it needs the pixel ratio). */
 let petals;
 let clouds;
+let precipitation;
 let themedMaterials = [];
 
 let hasRevealed = false;
@@ -59,18 +67,28 @@ function onFrame(time, delta) {
   if (!prefersReducedMotion) {
     petals.material.uniforms.uTime.value = time;
     clouds.material.uniforms.uTime.value = time;
+    precipitation.material.uniforms.uTime.value = time;
   }
   if (stepTheme(delta)) {
     for (const material of themedMaterials) material.uniforms.uMixRatio.value = theme.mix;
-    scene.background.lerpColors(SKY_COLORS.day, SKY_COLORS.night, theme.mix);
+    paintSky();
   }
   animateProps(time, delta, getHoveredObject());
   updatePicking(camera, label, isBlocked());
 }
 
+function paintSky() {
+  scene.background.lerpColors(sky.day, sky.night, theme.mix);
+}
+
 /** Shows live New York weather on the island; night follows New York daylight on first load. */
 function applyWeather(weather, isFirst) {
   setCloudWeather(clouds, weather);
+  setPrecipitation(precipitation, weather);
+  petals.material.uniforms.uWind.value = windVector(weather.windDegrees, weather.windMph * 0.03);
+  sky.day.lerpColors(SKY_COLORS.day, GLOOM_SKY.day, weather.gloom);
+  sky.night.lerpColors(SKY_COLORS.night, GLOOM_SKY.night, weather.gloom);
+  paintSky();
   document.body.dataset.weather = weather.kind;
   if (isFirst) setNight(!weather.isDay);
 }
@@ -84,7 +102,9 @@ async function boot() {
   scene.add(petals.points);
   clouds = createClouds();
   scene.add(clouds.mesh);
-  themedMaterials = [...islandMaterials, petals.material, clouds.material];
+  precipitation = createPrecipitation(isMobile ? 600 : 1500, renderer.getPixelRatio());
+  scene.add(precipitation.points);
+  themedMaterials = [...islandMaterials, petals.material, clouds.material, precipitation.material];
 
   const island = await loadIsland({ scene, camera, renderer, yieldToMain });
   for (const mesh of island.children) {
@@ -97,7 +117,7 @@ async function boot() {
   }
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
-  await warmUp([...island.children, petals.points, clouds.mesh]);
+  await warmUp([...island.children, petals.points, clouds.mesh, precipitation.points]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 

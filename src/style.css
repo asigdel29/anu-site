@@ -559,3 +559,42 @@ a {
   font-weight: 600;
   font-display: swap;
 }
+
+/* Weather overlays on the scene: mist for fog, a flash now and then in thunderstorms. */
+#experience::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 2s;
+}
+
+[data-weather="fog"] #experience::after {
+  opacity: 1;
+  background: linear-gradient(to top, rgba(225, 230, 238, 0.75), rgba(225, 230, 238, 0.15) 65%);
+}
+
+[data-weather="storm"] #experience::after {
+  background: #fff;
+  animation: lightning 13s infinite;
+}
+
+@keyframes lightning {
+  0%, 91%, 93.5%, 96%, 100% {
+    opacity: 0;
+  }
+  92% {
+    opacity: 0.5;
+  }
+  95% {
+    opacity: 0.3;
+  }
+}
+
+/* No flashing for people who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  [data-weather="storm"] #experience::after {
+    animation: none;
+  }
+}

@@ -40,6 +40,15 @@ export function sceneWeather(current) {
   };
 }
 
+/**
+ * Ground-plane vector (x, z) the wind pushes things along, scaled by strength. Wind comes
+ * *from* windDegrees (0 = north = -z), so things move the opposite way.
+ */
+export function windVector(windDegrees, strength) {
+  const heading = ((windDegrees + 180) * Math.PI) / 180;
+  return { x: Math.sin(heading) * strength, y: -Math.cos(heading) * strength };
+}
+
 /** True between 6 am and 7 pm in New York; used when the forecast is unavailable. */
 export function isDaytimeInNewYork(date = new Date()) {
   const hour = Number(
