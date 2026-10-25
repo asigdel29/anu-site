@@ -28,8 +28,8 @@ import { fetchWeather } from "./weather.js";
 
 /** How often the live weather refreshes. */
 const WEATHER_REFRESH_MS = 15 * 60 * 1000;
-/** Sky colours in the worst weather; gloom blends toward them. */
-const GLOOM_SKY = { day: new Color("#9aa5b1"), night: new Color("#15151f") };
+/** Sky colours in the worst weather; gloom blends toward them. Soft periwinkle, so bad weather stays toy-like. */
+const GLOOM_SKY = { day: new Color("#A9B4D6"), night: new Color("#1B1740") };
 /** Current sky colours for day and night, after the weather's gloom. */
 const sky = { day: SKY_COLORS.day.clone(), night: SKY_COLORS.night.clone() };
 

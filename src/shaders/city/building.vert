@@ -8,7 +8,7 @@ attribute vec4 aLook;      // facade style, palette index, roof slant in metres,
 
 uniform float uGround;
 
-varying vec3 vFacade;  // metres across the face, metres up, unused
+varying vec3 vFacade;  // metres across the face, metres up, face width in metres
 varying vec3 vNormal;
 varying vec3 vWorld;
 varying vec4 vShape;
@@ -22,8 +22,11 @@ void main()
     local.y -= aLook.z * step(0.999, position.y) * (position.z + 0.5);
     vec4 world = modelMatrix * vec4(aFootprint.x + local.x, uGround + aShape.x + local.y, aFootprint.y + local.z, 1.0);
 
-    float across = abs(normal.x) > 0.5 ? (position.z + 0.5) * aFootprint.w : (position.x + 0.5) * aFootprint.z;
-    vFacade = vec3(across, aShape.x + local.y, 0.0);
+    // The face width lets the fragment shader find the wall's corners for the rounded edge light.
+    bool eastWest = abs(normal.x) > 0.5;
+    float faceWidth = eastWest ? aFootprint.w : aFootprint.z;
+    float across = ((eastWest ? position.z : position.x) + 0.5) * faceWidth;
+    vFacade = vec3(across, aShape.x + local.y, faceWidth);
     vNormal = normalize(mat3(modelMatrix) * normal);
     vWorld = world.xyz;
     vShape = aShape;

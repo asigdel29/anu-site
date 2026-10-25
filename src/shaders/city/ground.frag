@@ -1,5 +1,6 @@
-// The city floor: Manhattan's streets and blocks, Central Park with its water and lawns, the
-// rivers, and borough land, hazed into the sky. Street lights glow along the grid at night.
+// The city floor as a toy map: sand-coloured Manhattan with pale streets, a bright green Central
+// Park with its water and lawns, cyan rivers, and pastel borough land, hazed into the sky.
+// Street lights glow along the grid at night.
 // PARK, MANHATTAN, GRID, AVENUE_ORIGIN and BOROUGH_EDGE come from src/city.js as defines.
 
 uniform float uMixRatio;
@@ -35,15 +36,17 @@ void main()
     float road = max(avenue, street) * manhattan * (1.0 - park);
 
     float ripple = 0.03 * sin(vCity.x * 0.12 + uTime * 0.6) * sin(vCity.z * 0.09 - uTime * 0.4);
-    vec3 dayWater = mix(vec3(0.36, 0.55, 0.68), uSky, 0.35) + ripple;
-    vec3 dayLand = mix(vec3(0.66, 0.65, 0.62), vec3(0.44, 0.45, 0.48), road);
-    vec3 dayPark = mix(vec3(0.42, 0.62, 0.37), vec3(0.56, 0.75, 0.46), lawn);
+    vec3 dayWater = mix(vec3(0.42, 0.83, 0.97), uSky, 0.2) + ripple;
+    // Sand blocks with pale cream streets, lilac New Jersey to the west and pink Brooklyn and Queens to the east.
+    vec3 boroughLand = mix(vec3(0.85, 0.78, 0.96), vec3(0.98, 0.78, 0.84), step(0.0, x));
+    vec3 dayLand = mix(mix(vec3(0.96, 0.86, 0.66), vec3(1.0, 0.96, 0.9), road), boroughLand, borough);
+    vec3 dayPark = mix(vec3(0.48, 0.8, 0.42), vec3(0.65, 0.91, 0.5), lawn);
     vec3 day = mix(dayWater, mix(dayLand, dayPark, park), land);
     day = mix(day, dayWater, pond);
 
-    vec3 nightWater = mix(vec3(0.03, 0.05, 0.1), uSky, 0.25) + ripple * 0.5;
-    vec3 nightLand = vec3(0.05, 0.05, 0.08) + vec3(1.0, 0.7, 0.36) * 0.4 * road;
-    vec3 night = mix(nightWater, mix(nightLand, vec3(0.04, 0.08, 0.06), park), land);
+    vec3 nightWater = mix(vec3(0.08, 0.1, 0.32), uSky, 0.25) + ripple * 0.5;
+    vec3 nightLand = vec3(0.12, 0.09, 0.22) + vec3(1.0, 0.72, 0.5) * 0.4 * road;
+    vec3 night = mix(nightWater, mix(nightLand, vec3(0.08, 0.15, 0.25), park), land);
     night = mix(night, nightWater, pond);
 
     vec3 color = mix(day, night, uMixRatio);
