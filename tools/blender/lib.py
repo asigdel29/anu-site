@@ -93,7 +93,7 @@ def new_collection(name):
     return col
 
 
-def mesh_object(name, bm, collection, materials, location=(0, 0, 0), rotation_z=0.0):
+def mesh_object(name, bm, collection, materials):
     """Turns a bmesh into a linked object with its own mesh data and material slots."""
     mesh = bpy.data.meshes.new(name)
     bm.to_mesh(mesh)
@@ -101,8 +101,6 @@ def mesh_object(name, bm, collection, materials, location=(0, 0, 0), rotation_z=
     for mat in materials:
         mesh.materials.append(mat)
     obj = bpy.data.objects.new(name, mesh)
-    obj.location = location
-    obj.rotation_euler.z = rotation_z
     collection.objects.link(obj)
     return obj
 
