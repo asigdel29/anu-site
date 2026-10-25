@@ -15,8 +15,7 @@ const overlay = document.querySelector(".overlay");
  * index.html marks them inert from the start, so the loading screen needs no script.
  */
 const backgroundParts = [
-  ".site-header",
-  ".toggle-buttons",
+  ".pill-nav",
   "#experience",
 ].flatMap((selector) => [...document.querySelectorAll(selector)]);
 

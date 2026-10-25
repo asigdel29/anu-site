@@ -35,7 +35,7 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
   await page.waitForTimeout(2000);
 
   const nav = page.getByRole("navigation", { name: "sections" });
-  for (const name of ["work", "about", "contact"]) {
+  for (const name of ["work", "about", "say hey"]) {
     await nav.getByRole("button", { name }).tap();
     await page.waitForTimeout(400);
     await page.keyboard.press("Escape");

@@ -183,73 +183,6 @@ a {
     display: block;
   }
 }
-/* Sound and theme toggles. */
-.toggle-buttons {
-  position: fixed;
-  top: 32px;
-  z-index: 2;
-  display: flex;
-  padding: 10px;
-  color: var(--ink);
-  background: var(--paper);
-  border: 3px solid var(--ink);
-  border-radius: 1rem;
-  box-shadow: rgba(0, 0, 0, 0.18) 0 3px 8px;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.toggle-buttons svg {
-  width: 28px;
-  height: 28px;
-  stroke: currentColor;
-}
-
-.mute-toggle-button {
-  right: 104px;
-}
-
-.theme-toggle-button {
-  right: 32px;
-}
-
-.toggle-buttons:active {
-  transform: scale(0.9);
-}
-
-/* Icons follow state: no script swaps them. */
-.sound-off-svg,
-.moon-svg,
-.mute-toggle-button[aria-pressed="true"] .sound-on-svg,
-.dark-theme .sun-svg {
-  display: none;
-}
-.mute-toggle-button[aria-pressed="true"] .sound-off-svg,
-.dark-theme .moon-svg {
-  display: block;
-}
-
-@media (hover: hover) {
-  .toggle-buttons:hover {
-    transform: scale(1.15);
-  }
-}
-
-@media (max-width: 768px) {
-  .toggle-buttons {
-    top: 20px;
-    padding: 8px;
-  }
-  .toggle-buttons svg {
-    width: 22px;
-    height: 22px;
-  }
-  .mute-toggle-button {
-    right: 72px;
-  }
-  .theme-toggle-button {
-    right: 16px;
-  }
-}
 /* Dialogs: display:none until open, so they cost no layout at load. */
 .overlay,
 .modal {
@@ -369,69 +302,6 @@ a {
   .modal-exit-button svg {
     width: 22px;
     height: 22px;
-  }
-}
-/* Header and nav: the plain way to reach every section. */
-.site-header {
-  position: fixed;
-  top: 28px;
-  left: 32px;
-  z-index: 2;
-  max-width: min(420px, calc(100vw - 180px));
-}
-
-.site-name {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.site-tagline {
-  margin-top: 4px;
-  font-size: 0.95rem;
-}
-
-.site-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.site-nav button {
-  padding: 6px 14px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--ink);
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.site-nav button:active {
-  transform: scale(0.9);
-}
-
-/* Touch screens keep :hover after a tap, so only real pointers get the hover look. */
-@media (hover: hover) {
-  .site-nav button:hover {
-    transform: translateY(-2px) scale(1.06);
-    background: var(--accent);
-    color: #17191f;
-  }
-}
-
-@media (max-width: 768px) {
-  .site-header {
-    top: 20px;
-    left: 16px;
-    max-width: calc(100vw - 150px);
-  }
-  .site-name {
-    font-size: 1.35rem;
-  }
-  .site-tagline {
-    font-size: 0.8rem;
   }
 }
 /* Dialog content: work cards, lists and contact links. */
@@ -596,5 +466,138 @@ a {
 @media (prefers-reduced-motion: reduce) {
   [data-weather="storm"] #experience::after {
     animation: none;
+  }
+}
+
+/* Floating glass pill nav, top centre: logo, sections, sound and night icons, and the call to action. */
+.light-theme {
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(23, 25, 31, 0.08);
+  --cta: #171717;
+  --cta-ink: #fefffc;
+}
+.dark-theme {
+  --glass: rgba(16, 16, 28, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --cta: #1f1f29;
+  --cta-ink: #f3f5f2;
+}
+
+.pill-nav {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  translate: -50% 0;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(14px);
+  box-shadow: rgba(0, 0, 0, 0.12) 0 8px 24px;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.pill-nav > button,
+.pill-link {
+  padding: 8px 12px;
+  white-space: nowrap;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: 9px;
+}
+
+.pill-logo {
+  display: flex;
+  padding: 7px;
+  background: rgba(127, 127, 127, 0.14);
+  border-radius: 9px;
+}
+
+.pill-logo svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pill-icons {
+  display: flex;
+}
+
+.icon-button {
+  display: flex;
+  padding: 8px;
+  color: var(--ink);
+  border-radius: 9px;
+}
+
+.icon-button svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+.pill-nav > .pill-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+  padding: 8px 10px 8px 16px;
+  color: var(--cta-ink);
+  background: var(--cta);
+  border: 1px solid var(--glass-border);
+}
+
+.pill-cta svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Icons follow state: no script swaps them. */
+.sound-off-svg,
+.moon-svg,
+.mute-toggle-button[aria-pressed="true"] .sound-on-svg,
+.dark-theme .sun-svg {
+  display: none;
+}
+.mute-toggle-button[aria-pressed="true"] .sound-off-svg,
+.dark-theme .moon-svg {
+  display: block;
+}
+
+/* Touch screens keep :hover after a tap, so only real pointers get the hover look. */
+@media (hover: hover) {
+  .pill-nav > button:hover,
+  .pill-link:hover,
+  .icon-button:hover {
+    background: rgba(127, 127, 127, 0.16);
+  }
+  .pill-nav > .pill-cta:hover {
+    background: var(--cta);
+    filter: brightness(1.25);
+  }
+}
+
+@media (max-width: 768px) {
+  .pill-logo,
+  .pill-link {
+    display: none;
+  }
+  .pill-nav {
+    top: 12px;
+    gap: 2px;
+    padding: 4px;
+  }
+  .pill-nav > button {
+    padding: 8px 9px;
+    font-size: 0.9rem;
+  }
+  .pill-nav > .pill-cta {
+    padding: 8px 8px 8px 12px;
   }
 }
