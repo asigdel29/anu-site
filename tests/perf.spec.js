@@ -1,5 +1,6 @@
-// Performance budget: records a Chrome trace of load, enter, idle frames, the nav opening, dialogs and the
-// theme toggle on a phone profile, and fails if any main-thread task does 20 ms or more of work.
+// Performance budget: records a Chrome trace of load, enter, idle frames, the nav opening, dialogs, the
+// scroll tour and the theme toggle on a phone profile, and fails if any main-thread task does 20 ms or
+// more of work.
 // Compositor commits and blocking waits on the GPU process are reported but not counted: in CI they
 // wait on software WebGL (no GPU), which says nothing about the site's own work.
 // PERF_CPU_THROTTLE=4 slows the CPU like a mid-range phone (CI runs at 1x).
@@ -47,6 +48,11 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
     await page.waitForTimeout(400);
     await page.keyboard.press("Escape");
     await page.waitForTimeout(400);
+  }
+  // The scroll tour: the camera flies to every stop and back to the first.
+  for (const stop of [1, 2, 3, 4, 5, 0]) {
+    await page.evaluate((stop) => window.scrollTo({ top: stop * window.innerHeight, behavior: "instant" }), stop);
+    await page.waitForTimeout(700);
   }
   await page.getByRole("button", { name: "night mode" }).dispatchEvent("click");
   await page.waitForTimeout(1500);

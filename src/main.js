@@ -5,6 +5,7 @@ import { Color } from "three";
 
 import { createClouds, setCloudWeather } from "./clouds.js";
 import { startDocks } from "./dock.js";
+import { placeCamera, startTour, stepTour } from "./explore.js";
 import { revealIsland, waitForEnter } from "./loading.js";
 import { islandMaterial, loadIsland } from "./island.js";
 import { setBackgroundInert } from "./modals.js";
@@ -40,6 +41,7 @@ let skyline;
 let themedMaterials = [];
 
 function onFrame(time, delta) {
+  stepTour(camera, delta);
   // Reduced motion freezes clouds and rain in place instead of hiding them.
   if (!prefersReducedMotion) {
     clouds.material.uniforms.uTime.value = time;
@@ -77,6 +79,7 @@ async function boot() {
   const weatherRequest = fetchWeather();
   const skylineRequest = createSkyline();
   await initScene();
+  placeCamera(camera, 0);
   await yieldToMain("clouds");
   clouds = createClouds();
   scene.add(clouds.mesh);
@@ -108,8 +111,11 @@ async function boot() {
   await revealIsland();
   setBackgroundInert(false);
   startDocks();
+  startTour();
   noteWeather(await weatherRequest);
 }
 
+// The tour always starts at the first stop, not where the last visit scrolled to.
+history.scrollRestoration = "manual";
 // Start on a fresh task so module evaluation and WebGL setup are not one long task.
 yieldToMain("boot").then(boot);

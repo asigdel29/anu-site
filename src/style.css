@@ -52,7 +52,6 @@
 }
 
 body {
-  overflow: hidden;
   font-family: var(--font-body);
   color: var(--ink);
   background: #8ddcf8;
@@ -971,4 +970,28 @@ a {
 /* Hidden under the loading screen anyway; skipping them keeps the first layout short. */
 body:not([data-state="ready"]) :is(.dock, .sky-status) {
   display: none;
+}
+
+/*
+ * Scroll tour (src/explore.js). The page scrolls one screen per stop and snaps to each stop, so
+ * one scroll moves the camera one stop. The scrollbar is hidden: the rail shows the place.
+ */
+html {
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+/* No scrolling under the loading screen or an open dialog. */
+body:has(.loading-screen, .modal.is-open) {
+  overflow: hidden;
+}
+
+.tour-stop {
+  height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
 }

@@ -1,7 +1,7 @@
-// Renderer, camera, orbit controls and the frame loop for the island scene.
+// Renderer, camera and the frame loop for the island scene. The scroll tour (explore.js)
+// moves the camera.
 
 import { Color, PerspectiveCamera, Scene, WebGLRenderer } from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 /**
  * True on phone-sized screens; drives framing, rain count and pixel ratio.
@@ -29,8 +29,6 @@ scene.background = SKY_COLORS.day.clone();
 export const camera = new PerspectiveCamera(35, 1, 0.5, 800);
 /** Set by initScene(). */
 export let renderer;
-/** Set by initScene(). */
-export let controls;
 
 function fitToWindow() {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -40,9 +38,9 @@ function fitToWindow() {
 }
 
 /**
- * Creates the WebGL context, the renderer, the canvas size and the controls in separate tasks:
- * each step makes blocking calls to the GPU process or compiles new code, and on a slow GPU
- * any two of them together pass 20 ms.
+ * Creates the WebGL context, the renderer and the canvas size in separate tasks: each step
+ * makes blocking calls to the GPU process or compiles new code, and on a slow GPU any two of
+ * them together pass 20 ms.
  */
 export async function initScene() {
   await yieldToMain("context");
@@ -52,27 +50,6 @@ export async function initScene() {
   await yieldToMain("canvas size");
   fitToWindow();
   window.addEventListener("resize", fitToWindow);
-  await yieldToMain("controls");
-  controls = new OrbitControls(camera, canvas);
-  await yieldToMain("camera");
-
-  // ponytail: camera numbers are tuned by eye for the blockout; retune after the final model.
-  controls.minDistance = 8;
-  controls.maxDistance = 35;
-  controls.minPolarAngle = 0.15 * Math.PI;
-  controls.maxPolarAngle = 0.62 * Math.PI;
-  controls.maxTargetRadius = 4;
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-
-  if (isMobile) {
-    camera.position.set(24, 11, 27);
-    controls.target.set(0, 2.5, 0);
-  } else {
-    camera.position.set(18, 7.5, 20.5);
-    controls.target.set(0, 1.6, 0);
-  }
-  controls.update();
 }
 
 /** Draws each object once in its own task, so first-draw buffer uploads never pile up. */
@@ -89,7 +66,6 @@ export function startLoop(onFrame) {
   renderer.setAnimationLoop((now) => {
     const delta = Math.min((now - last) / 1000, 0.1);
     last = now;
-    controls.update(delta);
     onFrame(now / 1000, delta);
     renderer.render(scene, camera);
   });
