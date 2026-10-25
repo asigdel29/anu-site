@@ -9,6 +9,19 @@ const LEAVE_MS = 700;
 const docks = [...document.querySelectorAll(".dock")];
 
 /**
+ * True after Tab and false after any other key or a pointer press. Focus that Tab moves in
+ * opens a dock; focus that Escape gives back after a dialog does not, even though the browser
+ * shows a focus ring for it.
+ */
+let tabbing = false;
+window.addEventListener("keydown", (event) => {
+  tabbing = event.key === "Tab";
+}, true);
+window.addEventListener("pointerdown", () => {
+  tabbing = false;
+}, true);
+
+/**
  * Writes each dock's open size into --open-w and --open-h. CSS can animate between two lengths
  * but not to or from auto, so the open size must be a number.
  */
@@ -46,11 +59,11 @@ function wireDock(dock) {
   dock.addEventListener("pointerleave", (event) => {
     if (event.pointerType !== "mouse") return;
     hovered = false;
-    if (!dock.querySelector(":focus-visible")) closeAfter(LEAVE_MS);
+    if (!(tabbing && dock.contains(document.activeElement))) closeAfter(LEAVE_MS);
   });
-  // Keyboard focus opens a dock; focus that a click or a closed dialog puts back does not.
-  dock.addEventListener("focusin", (event) => {
-    if (event.target.matches(":focus-visible")) open();
+  // Tabbing in opens a dock; focus that a click or a closed dialog puts back does not.
+  dock.addEventListener("focusin", () => {
+    if (tabbing) open();
   });
   dock.addEventListener("focusout", (event) => {
     if (!hovered && !dock.contains(event.relatedTarget)) closeAfter(LEAVE_MS);
