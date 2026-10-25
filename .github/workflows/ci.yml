@@ -1,4 +1,4 @@
-# Gate for every PR: build and size budget, and the model/code contract test.
+# Gate for every PR: build and size budget, the contract test and the browser tests (20 ms main-thread budget).
 name: ci
 
 on:
@@ -26,3 +26,10 @@ jobs:
           big=$(find dist -type f -size +1200k)
           if [ -n "$big" ]; then echo "files over 1.2 MB: $big"; exit 1; fi
       - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
