@@ -6,6 +6,8 @@ import {
   BufferGeometry,
   Group,
   ImageBitmapLoader,
+  InterleavedBuffer,
+  InterleavedBufferAttribute,
   LinearFilter,
   Mesh,
   SRGBColorSpace,
@@ -17,6 +19,8 @@ import {
 
 import vertexShader from "./shaders/theme/vertex.glsl?raw";
 import fragmentShader from "./shaders/theme/fragment.glsl?raw";
+import canopyVertexShader from "./shaders/theme/canopy.vert?raw";
+import canopyFragmentShader from "./shaders/theme/canopy.frag?raw";
 
 /** Phones and small tablets get the smaller atlases to stay inside iOS GPU limits. */
 const TEXTURE_TIER =
@@ -39,9 +43,18 @@ export const islandMaterial = new ShaderMaterial({
   fragmentShader,
 });
 
+/** Day/night blend of meshes baked into vertex colours (the blossom canopy); shares the theme blend. */
+const vertexColorMaterial = new ShaderMaterial({
+  uniforms: { uMixRatio: islandMaterial.uniforms.uMixRatio },
+  vertexShader: canopyVertexShader,
+  fragmentShader: canopyFragmentShader,
+});
+
 /**
  * Reads the mesh pack written by tools/blender/bake_export.py: a uint32 header length, a
- * JSON header, then quantized vertex data used as-is through typed-array views.
+ * JSON header, then quantized vertex data used as-is through typed-array views. A node has
+ * either atlas UVs or baked day and night vertex colours. root.userData.anchors maps each
+ * tour stop to the island-space point where its marker goes.
  */
 async function loadMeshPack(url) {
   const response = await fetch(url);
@@ -54,23 +67,30 @@ async function loadMeshPack(url) {
   for (const node of header.nodes) {
     const geometry = new BufferGeometry();
     const positions = new Int16Array(buffer, dataStart + node.positions, node.count * 3);
-    const uvs = new Uint16Array(buffer, dataStart + node.uvs, node.count * 2);
     const IndexArray = node.indexType === 32 ? Uint32Array : Uint16Array;
     geometry.setAttribute("position", new BufferAttribute(positions, 3, true));
-    geometry.setAttribute("uv", new BufferAttribute(uvs, 2, true));
+    if (node.uvs !== undefined) {
+      geometry.setAttribute("uv", new BufferAttribute(new Uint16Array(buffer, dataStart + node.uvs, node.count * 2), 2, true));
+    } else {
+      // Day RGB then night RGB per vertex.
+      const colours = new InterleavedBuffer(new Uint8Array(buffer, dataStart + node.colours, node.count * 6), 6);
+      geometry.setAttribute("dayColor", new InterleavedBufferAttribute(colours, 3, 0, true));
+      geometry.setAttribute("nightColor", new InterleavedBufferAttribute(colours, 3, 3, true));
+    }
     geometry.setIndex(new BufferAttribute(new IndexArray(buffer, dataStart + node.indices, node.indexCount), 1));
     // Bounds come from the header: computing them would walk every vertex on the main thread.
     geometry.boundingBox = new Box3(new Vector3().fromArray(node.min), new Vector3().fromArray(node.max));
     geometry.boundingSphere = geometry.boundingBox.getBoundingSphere(new Sphere());
 
     // The node scale also undoes the position quantization.
-    const mesh = new Mesh(geometry);
+    const mesh = new Mesh(geometry, node.uvs !== undefined ? islandMaterial : vertexColorMaterial);
     mesh.name = node.name;
     mesh.position.fromArray(node.position);
     mesh.quaternion.fromArray(node.quaternion);
     mesh.scale.fromArray(node.scale);
     root.add(mesh);
   }
+  root.userData.anchors = header.anchors ?? {};
   return root;
 }
 
@@ -98,7 +118,6 @@ export async function loadIsland({ scene, camera, renderer, yieldToMain }) {
 
   islandMaterial.uniforms.uDayTexture.value = textures[0];
   islandMaterial.uniforms.uNightTexture.value = textures[1];
-  for (const mesh of island.children) mesh.material = islandMaterial;
 
   for (const texture of textures) {
     renderer.initTexture(texture);

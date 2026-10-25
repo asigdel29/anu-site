@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 import bpy
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 from mesh_pack import BAKE_UV, export_mesh_pack  # noqa: E402
@@ -46,7 +47,27 @@ def parse_args():
 
 
 def set_objects(atlas):
-    return [o for o in bpy.data.collections[SETS[atlas]].all_objects if o.type == "MESH"]
+    """Meshes of one atlas set; meshes marked vertex_bake keep their light in vertex colours instead."""
+    return [o for o in bpy.data.collections[SETS[atlas]].all_objects if o.type == "MESH" and not o.get("vertex_bake")]
+
+
+def vertex_baked_objects():
+    return [o for atlas in SETS for o in bpy.data.collections[SETS[atlas]].all_objects if o.get("vertex_bake")]
+
+
+def bake_vertex_colours(mode):
+    """Bakes full lighting into a per-vertex colour named after the mode ("Day", "Night").
+
+    Used for the blossom canopy: its many small UV islands showed seams in an atlas, and colour
+    per vertex has no seams at all.
+    """
+    for obj in vertex_baked_objects():
+        name = mode.title()
+        colours = obj.data.color_attributes
+        layer = colours.get(name) or colours.new(name, "FLOAT_COLOR", "POINT")
+        colours.active_color = layer
+        select_only([obj])
+        bpy.ops.object.bake(type="COMBINED", target="VERTEX_COLORS")
 
 
 def select_only(objects):
@@ -77,7 +98,7 @@ def ensure_uvs(atlas):
     bpy.ops.uv.average_islands_scale()
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    # Per-object texel weight: the plain brick pillars give pixels to the grass top.
+    # Per-object texel weight: the plain clay pillars give pixels to the grass top.
     # Weights are divided by the largest one so every UV stays inside the 0-1 tile; the packer
     # would otherwise put them in another UDIM tile, which wraps onto other islands.
     heaviest = max(obj.get("texel_weight", 1.0) for obj in objects)
@@ -89,7 +110,9 @@ def ensure_uvs(atlas):
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     # Box packing: the default concave packer takes many minutes with many islands.
-    bpy.ops.uv.pack_islands(margin=0.003, rotate=True, shape_method="AABB")
+    # A fixed fraction keeps about 4 px between islands at 1024 px. The default margin scales
+    # with island size, so small islands touched and baked black seams.
+    bpy.ops.uv.pack_islands(margin=0.004, margin_method="FRACTION", rotate=True, shape_method="AABB")
     bpy.ops.object.mode_set(mode="OBJECT")
     return True
 
@@ -101,9 +124,48 @@ def set_lighting(mode):
     bpy.context.scene.world = bpy.data.worlds[f"World_{mode}"]
 
 
+def fill_gaps(png_path):
+    """Floods every unbaked pixel of the saved PNG with the colour of the nearest baked island.
+
+    The bake leaves the space between UV islands black (alpha 0). Lossy WebP smears that black
+    into the island edges, so every UV seam would show as a dark line on the model.
+    The PNG is read back from disk because the image in memory does not hold the baked colours.
+    """
+    loaded = bpy.data.images.load(str(png_path))
+    width, height = loaded.size
+    pixels = np.empty(width * height * 4, dtype=np.float32)
+    loaded.pixels.foreach_get(pixels)
+    bpy.data.images.remove(loaded)
+    pixels = pixels.reshape(height, width, 4)
+    shifts = ((1, 0), (-1, 0), (0, 1), (0, -1))
+    # The outer ring of each island is shaded from points just past the triangle edges, inside
+    # the mesh, so it bakes dark. Repaint it from the pixels just inside. A part too thin to
+    # have an inside keeps its own pixels.
+    baked = pixels[..., 3] > 0
+    inside = baked & np.logical_and.reduce([np.roll(baked, shift, axis=(0, 1)) for shift in shifts])
+    colour = sum(np.roll(pixels * inside[..., None], shift, axis=(0, 1)) for shift in shifts)
+    count = sum(np.roll(inside, shift, axis=(0, 1)).astype(np.float32) for shift in shifts)
+    ring = baked & ~inside & (count > 0)
+    pixels[ring, :3] = colour[ring, :3] / count[ring, None]
+    while not pixels[..., 3].all():
+        # Each pass grows the baked area by one pixel, averaging the baked neighbours.
+        neighbours = [np.roll(pixels, shift, axis=(0, 1)) for shift in shifts]
+        total = sum(n * n[..., 3:4] for n in neighbours)
+        grow = (pixels[..., 3] == 0) & (total[..., 3] > 0)
+        pixels[grow, :3] = total[grow, :3] / total[grow, 3:4]
+        pixels[grow, 3] = 1
+    # A new image: changed pixels of a loaded image are not written back by save().
+    filled = bpy.data.images.new("filled", width, height, alpha=False)
+    filled.pixels.foreach_set(pixels.ravel())
+    filled.filepath_raw = str(png_path)
+    filled.file_format = "PNG"
+    filled.save()
+    bpy.data.images.remove(filled)
+
+
 def bake_atlas(atlas, mode, size):
     """Bakes full lighting (COMBINED, so emission glows too) for one set into one image."""
-    image = bpy.data.images.new(f"{atlas}_{mode}", size, size, float_buffer=True, alpha=False)
+    image = bpy.data.images.new(f"{atlas}_{mode}", size, size, float_buffer=True, alpha=True)
     objects = set_objects(atlas)
     for mat in {slot.material for o in objects for slot in o.material_slots if slot.material}:
         nodes = mat.node_tree.nodes
@@ -121,7 +183,7 @@ def bake_atlas(atlas, mode, size):
     for obj in objects:
         obj.hide_render = True
     select_only([merged])
-    bpy.ops.object.bake(type="COMBINED", margin=16, use_clear=True, target="IMAGE_TEXTURES")
+    bpy.ops.object.bake(type="COMBINED", margin=0, use_clear=True, target="IMAGE_TEXTURES")
     for obj in objects:
         obj.hide_render = False
     bpy.data.objects.remove(merged, do_unlink=True)
@@ -131,8 +193,9 @@ def bake_atlas(atlas, mode, size):
     settings = bpy.context.scene.render.image_settings
     settings.file_format = "PNG"
     settings.color_depth = "8"
-    settings.color_mode = "RGB"
+    settings.color_mode = "RGBA"
     image.save_render(str(png_path), scene=bpy.context.scene)
+    fill_gaps(png_path)
     return png_path
 
 
@@ -162,6 +225,7 @@ def prepare_for_export():
         joined.data.name = atlas
         exported.append(joined)
 
+    exported += vertex_baked_objects()
     for obj in exported:
         mesh = obj.data
         for layer in [l for l in mesh.uv_layers if l.name != BAKE_UV]:
@@ -190,6 +254,9 @@ def main():
     except TypeError:
         print("Metal is not available; baking on the CPU")
     scene.cycles.samples = args.samples
+    # Samples spread over the pixel filter; at an island edge some miss the mesh and darken the
+    # edge pixels, which shows as a dark line along every UV seam. Keep them on the pixel centre.
+    scene.cycles.filter_width = 0.01
     # Same view transform for both modes, so the shader's gamma step reproduces what Blender shows.
     scene.view_settings.view_transform = "Standard"
     scene.view_settings.look = "None"
@@ -203,9 +270,10 @@ def main():
             png_path = bake_atlas(atlas, mode, args.size)
             write_webp(png_path, atlas, mode, args.size)
             print(f"baked {atlas} {mode}")
+        bake_vertex_colours(mode)
 
     exported = prepare_for_export()
-    export_mesh_pack(exported, MESH_PATH)
+    export_mesh_pack(exported, MESH_PATH, bpy.data.collections["Anchors"].objects)
     print(f"exported {MESH_PATH} ({MESH_PATH.stat().st_size // 1024} KB)")
 
 
