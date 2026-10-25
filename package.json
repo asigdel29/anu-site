@@ -1,5 +1,5 @@
 {
-  "name": "room-portfolio",
+  "name": "anu-site",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,8 +12,6 @@
     "vite": "^6.0.5"
   },
   "dependencies": {
-    "glsl-blend": "^1.0.3",
-    "glslify-loader": "^2.0.0",
     "gsap": "^3.12.7",
     "howler": "^2.2.4",
     "include-media": "^2.0.0",
