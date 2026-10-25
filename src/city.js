@@ -46,8 +46,8 @@ export const PALETTE = [
   "#6FA58F", "#D9DEE6", "#D9B45A", "#EFEDE8",
 ];
 
-/** How a part shows at night: plain windows, a floodlit crown, or a bare spire. */
-export const LIGHT = { none: 0, crown: 1, spire: 2 };
+/** How a part shows: windows, a crown floodlit at night, or bare (no windows: spires, masts, rooftop boxes). */
+export const LIGHT = { none: 0, crown: 1, bare: 2 };
 
 /** Where the towers are: Midtown south of the park, the Financial District, and the waterfronts across the rivers. */
 const CLUSTERS = [
@@ -129,14 +129,14 @@ export const LANDMARKS = [
   landmark(122, blockSouthOf(43), STYLE.piers, 3, [
     tier(6.2, 6.2, 5.5), tier(5, 5, 7.5), tier(3.8, 3.8, 24.5), tier(3.2, 3.2, 25.8, { taper: 0.2, palette: 9, light: LIGHT.crown }),
     tier(2.6, 2.6, 27, { taper: 0.25, palette: 9, light: LIGHT.crown }), tier(2, 2, 28, { taper: 0.3, palette: 9, light: LIGHT.crown }),
-    tier(1.4, 1.4, 29, { taper: 0.4, palette: 9, light: LIGHT.crown }), tier(0.25, 0.25, 31.9, { taper: 0.9, palette: 9, light: LIGHT.spire }),
+    tier(1.4, 1.4, 29, { taper: 0.4, palette: 9, light: LIGHT.crown }), tier(0.25, 0.25, 31.9, { taper: 0.9, palette: 9, light: LIGHT.bare }),
   ]),
-  landmark(52, blockSouthOf(43), STYLE.glass, 5, [tier(5, 5, 40, { taper: 0.45 }), tier(0.25, 0.25, 42.7, { light: LIGHT.spire })]),
-  landmark(20, blockSouthOf(43), STYLE.glass, 7, [tier(5, 5, 28.8, { taper: 0.25 }), tier(0.3, 0.3, 36.6, { light: LIGHT.spire })]),
+  landmark(52, blockSouthOf(43), STYLE.glass, 5, [tier(5, 5, 40, { taper: 0.45 }), tier(0.25, 0.25, 42.7, { light: LIGHT.bare })]),
+  landmark(20, blockSouthOf(43), STYLE.glass, 7, [tier(5, 5, 28.8, { taper: 0.25 }), tier(0.3, 0.3, 36.6, { light: LIGHT.bare })]),
   // The Empire State Building: limestone setbacks, a floodlit crown and the mast.
   landmark(30, blockSouthOf(34), STYLE.piers, 2, [
     tier(12.6, 6.2, 2.5), tier(10, 5.6, 7.2), tier(7, 4.6, 26), tier(5.4, 3.8, 32), tier(3, 2.6, 34.5),
-    tier(1.6, 1.6, 38, { palette: 11, light: LIGHT.crown }), tier(0.25, 0.25, 44.3, { light: LIGHT.spire }),
+    tier(1.6, 1.6, 38, { palette: 11, light: LIGHT.crown }), tier(0.25, 0.25, 44.3, { light: LIGHT.bare }),
   ]),
   // Hudson Yards: 30 Hudson Yards with its slanted top, and two neighbours.
   landmark(-98, blockSouthOf(34), STYLE.glass, 5, [tier(5, 5, 38.7, { slant: 3 })]),
@@ -152,9 +152,9 @@ export const LANDMARKS = [
   landmark(-52, blockSouthOf(72), STYLE.punched, 3, [tier(9, 6, 5.6), tier(9, 6, 6.6, { taper: 0.2, palette: 8 })]),
   // Downtown: One World Trade Center, 3 and 4 WTC, Woolworth, 56 Leonard, 40 Wall Street.
   landmark(-45, 472, STYLE.glass, 5, [
-    tier(6.2, 6.2, 5.5), tier(6.2, 6.2, 41.7, { base: 5.5, taper: 0.29 }), tier(2.4, 2.4, 42.5), tier(0.3, 0.3, 54.1, { light: LIGHT.spire }),
+    tier(6.2, 6.2, 5.5), tier(6.2, 6.2, 41.7, { base: 5.5, taper: 0.29 }), tier(2.4, 2.4, 42.5), tier(0.3, 0.3, 54.1, { light: LIGHT.bare }),
   ]),
-  landmark(-22, 480, STYLE.glass, 6, [tier(5, 5, 32.9), tier(0.25, 0.25, 36, { light: LIGHT.spire })]),
+  landmark(-22, 480, STYLE.glass, 6, [tier(5, 5, 32.9), tier(0.25, 0.25, 36, { light: LIGHT.bare })]),
   landmark(-28, 488, STYLE.glass, 7, [tier(5, 5, 29.8, { slant: 1.5 })]),
   landmark(-8, 440, STYLE.piers, 11, [
     tier(6, 6, 9), tier(3, 3, 20), tier(2.4, 2.4, 22), tier(2.2, 2.2, 24.1, { taper: 0.9, palette: 8 }),
@@ -163,7 +163,7 @@ export const LANDMARKS = [
     tier(3.4, 3.4, 15), tier(3.6, 3.6, 18, { dx: 0.4 }), tier(3.4, 3.4, 21, { dx: -0.4 }), tier(3.2, 3.2, 25, { dz: 0.3 }),
   ]),
   landmark(6, 496, STYLE.piers, 2, [
-    tier(4, 4, 24), tier(2.6, 2.6, 27, { taper: 0.5, palette: 8 }), tier(0.15, 0.15, 28.3, { light: LIGHT.spire }),
+    tier(4, 4, 24), tier(2.6, 2.6, 27, { taper: 0.5, palette: 8 }), tier(0.15, 0.15, 28.3, { light: LIGHT.bare }),
   ]),
 ].flat();
 
@@ -238,6 +238,51 @@ function fillBlock(buildings, block, heightAt, random) {
   }
 }
 
+/** Tops above this get red aviation lights. */
+const AVIATION_HEIGHT = 18;
+
+/**
+ * Turns one lot into boxes: pre-war towers step back in tiers, as the 1916 zoning law shaped
+ * Midtown, and many roofs carry a bulkhead (the box that houses stairs, lifts and tanks).
+ */
+function lotParts(lot, random) {
+  const parts = [];
+  if (lot.style === STYLE.piers && lot.height > 14) {
+    let base = 0;
+    [0.45, 0.75, 1].forEach((cut, step) => {
+      const shrink = 1 - step * 0.2;
+      const top = lot.height * cut;
+      parts.push({ ...lot, width: lot.width * shrink, depth: lot.depth * shrink, base, height: top - base });
+      base = top;
+    });
+  } else {
+    parts.push(lot);
+  }
+  if (random() < 0.35) {
+    const roof = parts[parts.length - 1];
+    parts.push({
+      ...roof,
+      width: roof.width * 0.4,
+      depth: roof.depth * 0.5,
+      base: lot.height,
+      height: 0.4 + random() * 0.5,
+      palette: 4,
+      light: LIGHT.bare,
+    });
+  }
+  return parts;
+}
+
+/** Red aviation lights on every top above AVIATION_HEIGHT: packed x, top, z, blink phase. */
+export function layoutLights(buildings) {
+  const lights = [];
+  for (const b of buildings) {
+    const top = b.base + b.height;
+    if (top > AVIATION_HEIGHT) lights.push(b.x, top + 0.15, b.z, b.seed);
+  }
+  return new Float32Array(lights);
+}
+
 /** True when a lot's footprint overlaps a landmark's, so the landmark takes its place. */
 function underLandmark(lot) {
   return LANDMARKS.some(
@@ -248,7 +293,8 @@ function underLandmark(lot) {
 /**
  * Returns every building as a record: centre (x, z), footprint (width along x, depth along z),
  * base and height above the street, taper (top shrink, 0..1), seed, facade style, palette,
- * roof slant and night light. Landmarks replace the lots under them.
+ * roof slant and night light. Landmarks replace the lots under them; the rest become tiers and
+ * rooftop boxes.
  */
 export function layoutCity(seed = 1625) {
   const random = seeded(seed);
@@ -281,7 +327,10 @@ export function layoutCity(seed = 1625) {
       }
     }
   }
-  return buildings.filter((lot) => !underLandmark(lot)).concat(LANDMARKS);
+  return buildings
+    .filter((lot) => !underLandmark(lot))
+    .flatMap((lot) => lotParts(lot, random))
+    .concat(LANDMARKS);
 }
 
 /** Ellipses in Central Park (centre x, z, radius x, z) at their real streets: water, then open lawns. */

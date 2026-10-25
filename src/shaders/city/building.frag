@@ -45,13 +45,13 @@ void main()
     vec3 normal = normalize(vNormal);
     float wall = 1.0 - step(0.5, abs(normal.y));
     float crown = step(0.5, vLook.w) * step(vLook.w, 1.5);
-    float spire = step(1.5, vLook.w);
+    float bare = step(1.5, vLook.w);
 
     vec2 grid = vFacade.xy / CELL[style];
     vec2 width = fwidth(grid);
     vec4 pane = PANE[style];
-    // Crowns and spires are metal or stone, with no windows.
-    float window = wall * (1.0 - crown - spire) * filteredPulse(grid.x, width.x, pane.x, pane.y)
+    // Crowns, spires and rooftop boxes have no windows.
+    float window = wall * (1.0 - crown - bare) * filteredPulse(grid.x, width.x, pane.x, pane.y)
         * filteredPulse(grid.y, width.y, pane.z, pane.w);
 
     // Each window has its own on/off rhythm; far away, where a pixel spans many windows,
