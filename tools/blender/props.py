@@ -106,7 +106,7 @@ def build_mailbox(col):
 
 
 # Stop name -> (builder, distance from the island centre, site azimuth in degrees, marker height).
-# The azimuths match the tour stops in src/tour.js.
+# The tour stops in src/tour.js look at these points; their cameras stand a little further round.
 PROPS = {
     "about": (build_stick_figure, 1.8, 12, 2.4),
     "work": (build_laptop, 2.0, 95, 1.3),

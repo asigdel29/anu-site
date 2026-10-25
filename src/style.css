@@ -565,9 +565,19 @@ a {
   z-index: 2;
   width: var(--open-w);
   height: var(--open-h);
+  /* Only the island takes touches; the empty zone must not block the scene below. */
+  pointer-events: none;
+}
+
+/* With a mouse, the whole open-size zone is the hover target. */
+@media (hover: hover) {
+  .dock {
+    pointer-events: auto;
+  }
 }
 
 .island {
+  pointer-events: auto;
   position: absolute;
   overflow: hidden;
   width: var(--open-w);
