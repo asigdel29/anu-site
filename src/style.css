@@ -250,3 +250,124 @@ a {
     right: 16px;
   }
 }
+/* Dialogs: display:none until open, so they cost no layout at load. */
+.overlay,
+.modal {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.25s, scale 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), display 0.25s allow-discrete;
+}
+
+.overlay.is-open,
+.modal.is-open {
+  display: block;
+  opacity: 1;
+}
+
+@starting-style {
+  .overlay.is-open,
+  .modal.is-open {
+    opacity: 0;
+  }
+  .modal.is-open {
+    scale: 0.85;
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  background: var(--overlay);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  width: 90%;
+  max-width: 960px;
+  padding: 28px;
+  translate: -50% -50%;
+  color: var(--ink);
+  background: var(--paper);
+  border: 4px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: rgba(0, 0, 0, 0.25) 0 10px 30px;
+}
+
+.modal.about {
+  max-width: 720px;
+}
+
+.modal.contact {
+  max-width: 460px;
+}
+
+.modal-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.modal-title {
+  padding: 6px 40px;
+  font-size: 1.6rem;
+  color: #17191f;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.modal-content {
+  width: 100%;
+  max-height: min(560px, 65vh);
+  padding-right: 10px;
+  overflow-y: auto;
+  font-size: 1.1rem;
+  line-height: 1.55;
+  overscroll-behavior: contain;
+}
+
+.modal-exit-button {
+  position: absolute;
+  top: -1.4rem;
+  left: -1.4rem;
+  display: flex;
+  padding: 10px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 1rem;
+  rotate: -12deg;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 3px 8px;
+}
+
+.modal-exit-button svg {
+  width: 28px;
+  height: 28px;
+}
+
+@media (max-width: 768px) {
+  .modal {
+    padding: 20px 16px;
+  }
+  .modal-title {
+    font-size: 1.3rem;
+  }
+  .modal-content {
+    font-size: 1rem;
+  }
+  .modal-exit-button {
+    top: auto;
+    bottom: -1.6rem;
+    left: calc(50% - 24px);
+    rotate: none;
+  }
+  .modal-exit-button svg {
+    width: 22px;
+    height: 22px;
+  }
+}

@@ -3,6 +3,7 @@
 
 import { revealIsland, waitForEnter } from "./loading.js";
 import { islandMaterials, loadIsland } from "./island.js";
+import { isModalOpen, setBackgroundInert, showModal } from "./modals.js";
 import { prefersReducedMotion } from "./motion.js";
 import { createPetals, fitPetalsToCanopy } from "./petals.js";
 import {
@@ -35,13 +36,14 @@ let themedMaterials = [];
 
 let hasRevealed = false;
 /** Clicks and hovers pause under the loading screen and while a dialog is open. */
-const isBlocked = () => !hasRevealed;
+const isBlocked = () => !hasRevealed || isModalOpen();
 
-/** Runs an object's action. Links open now; dialogs arrive with the dialog code. */
+/** Runs an object's action: open its link in a new tab, or its dialog. */
 function runAction(action) {
   if (!action) return;
   playClick();
   if (action.url) window.open(action.url, "_blank", "noopener,noreferrer");
+  else showModal(action.modal);
 }
 
 setupPicking(canvas, camera, { isBlocked, onAction: runAction });
@@ -84,7 +86,7 @@ async function boot() {
 
   await revealIsland();
   hasRevealed = true;
-  for (const element of document.querySelectorAll("#experience, .toggle-buttons")) element.inert = false;
+  setBackgroundInert(false);
   startIntro(performance.now() / 1000);
 }
 
