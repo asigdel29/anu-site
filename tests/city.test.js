@@ -14,8 +14,8 @@ import {
   layoutLights,
   layoutTrees,
   layoutCity,
+  buildCityArrays,
   manhattanHalfWidth,
-  packCity,
 } from "../src/city.js";
 
 const buildings = layoutCity();
@@ -57,11 +57,13 @@ test("every landmark stands, and no ordinary lot overlaps one", () => {
   }
 });
 
-test("packing keeps one entry per building", () => {
-  const { footprint, shape, look } = packCity(buildings);
+test("the arrays the meshes read hold one entry per building, tree and light", () => {
+  const { footprint, shape, look, trees, lights } = buildCityArrays();
   assert.equal(footprint.length, buildings.length * 4);
   assert.equal(shape.length, buildings.length * 4);
   assert.equal(look.length, buildings.length * 4);
+  assert.equal(trees.length, layoutTrees().length);
+  assert.equal(lights.length, layoutLights(buildings).length);
 });
 
 test("trees grow in the park and never in its water", () => {
