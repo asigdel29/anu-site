@@ -371,3 +371,66 @@ a {
     height: 22px;
   }
 }
+/* Header and nav: the plain way to reach every section. */
+.site-header {
+  position: fixed;
+  top: 28px;
+  left: 32px;
+  z-index: 2;
+  max-width: min(420px, calc(100vw - 180px));
+}
+
+.site-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.site-tagline {
+  margin-top: 4px;
+  font-size: 0.95rem;
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.site-nav button {
+  padding: 6px 14px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.site-nav button:active {
+  transform: scale(0.9);
+}
+
+/* Touch screens keep :hover after a tap, so only real pointers get the hover look. */
+@media (hover: hover) {
+  .site-nav button:hover {
+    transform: translateY(-2px) scale(1.06);
+    background: var(--accent);
+    color: #17191f;
+  }
+}
+
+@media (max-width: 768px) {
+  .site-header {
+    top: 20px;
+    left: 16px;
+    max-width: calc(100vw - 150px);
+  }
+  .site-name {
+    font-size: 1.35rem;
+  }
+  .site-tagline {
+    font-size: 0.8rem;
+  }
+}
