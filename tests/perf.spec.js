@@ -20,6 +20,12 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
   const cdp = await context.newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: THROTTLE });
 
+  // Fixed weather, so the test never depends on the network.
+  await page.route("**/api.open-meteo.com/**", (route) =>
+    route.fulfill({
+      json: { current: { weather_code: 3, temperature_2m: 44, is_day: 0, cloud_cover: 100, wind_direction_10m: 316, wind_speed_10m: 4 } },
+    })
+  );
   await browser.startTracing(page, {
     categories: ["devtools.timeline", "disabled-by-default-devtools.timeline"],
   });

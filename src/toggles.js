@@ -46,12 +46,16 @@ muteButton.addEventListener("click", () => {
   startMusic();
 });
 
-themeButton.addEventListener("click", () => {
-  theme.target = theme.target ? 0 : 1;
-  const isNight = theme.target === 1;
+/** Switches to night or day; the frame loop eases the scene into it. */
+export function setNight(isNight) {
+  theme.target = isNight ? 1 : 0;
   document.body.classList.toggle("dark-theme", isNight);
   document.body.classList.toggle("light-theme", !isNight);
   themeButton.setAttribute("aria-pressed", String(isNight));
+}
+
+themeButton.addEventListener("click", () => {
+  setNight(theme.target === 0);
   playClick();
 });
 

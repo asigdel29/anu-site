@@ -18,6 +18,12 @@ test("island loads and every section opens from the nav", async ({ page }) => {
     }
   });
 
+  // Fixed weather, so the test never depends on the network.
+  await page.route("**/api.open-meteo.com/**", (route) =>
+    route.fulfill({
+      json: { current: { weather_code: 3, temperature_2m: 44, is_day: 0, cloud_cover: 100, wind_direction_10m: 316, wind_speed_10m: 4 } },
+    })
+  );
   const started = Date.now();
   await page.goto("/");
   await expect(page.getByText("hey, give the petals a second")).toBeVisible();
