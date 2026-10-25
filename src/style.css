@@ -439,39 +439,117 @@ a {
   }
 }
 
-/* Floating glass pill nav, top centre: logo, sections, sound and night icons, and the call to action. */
+/* Frosted glass for the nav and the hero card. */
 .light-theme {
-  --glass: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(23, 25, 31, 0.08);
+  --glass: rgba(255, 255, 255, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shine: rgba(255, 255, 255, 0.7);
   --cta: #171717;
   --cta-ink: #fefffc;
 }
 .dark-theme {
-  --glass: rgba(16, 16, 28, 0.5);
-  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass: rgba(22, 20, 44, 0.38);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-shine: rgba(255, 255, 255, 0.16);
   --cta: #1f1f29;
   --cta-ink: #f3f5f2;
 }
 
-.pill-nav {
+/*
+ * Docks: glass "dynamic islands". Each dock holds its island at the open size, so hovering the
+ * place where the island was opens it again. src/dock.js measures the open size into --open-w and
+ * --open-h (lengths animate, auto does not) and toggles .is-collapsed.
+ */
+.dock {
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   position: fixed;
+  z-index: 2;
+  width: var(--open-w);
+  height: var(--open-h);
+}
+
+.island {
+  position: absolute;
+  overflow: hidden;
+  width: var(--open-w);
+  height: var(--open-h);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--open-radius);
+  box-shadow: rgba(20, 40, 80, 0.16) 0 10px 30px, inset 0 1px 0 var(--glass-shine);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  transition: width 0.6s var(--spring), height 0.6s var(--spring), border-radius 0.6s var(--spring);
+}
+
+.island-body {
+  position: absolute;
+  transition: opacity 0.3s 0.12s, filter 0.3s 0.12s, scale 0.45s var(--spring);
+}
+
+.island-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.is-collapsed .island {
+  width: var(--closed-w);
+  height: var(--closed-h);
+  border-radius: 999px;
+}
+
+.is-collapsed .island-body {
+  opacity: 0;
+  filter: blur(8px);
+  scale: 0.92;
+  pointer-events: none;
+  transition-delay: 0s;
+}
+
+.is-collapsed .island-face {
+  opacity: 1;
+  transition-delay: 0.18s;
+}
+
+/* Nav dock, top centre: logo, sections, sound and night icons, and the call to action. */
+.dock-nav {
+  --open-radius: 16px;
+  --closed-w: 92px;
+  --closed-h: 34px;
   top: 16px;
   left: 50%;
-  z-index: 2;
+  /* The hover zone also covers the strip under the nav, where the masthead was. */
+  height: calc(var(--open-h) + 64px);
+  translate: -50% 0;
+}
+
+.dock-nav .island,
+.dock-nav .island-body {
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+}
+
+.pill-nav .island-body {
   display: flex;
+  width: max-content;
   align-items: center;
   gap: 4px;
   padding: 6px;
-  translate: -50% 0;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  backdrop-filter: blur(14px);
-  box-shadow: rgba(0, 0, 0, 0.12) 0 8px 24px;
   font-family: "Inter", system-ui, sans-serif;
 }
 
-.pill-nav > button,
+.pill-nav .island-face svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pill-nav .island-body > button,
 .pill-link {
   padding: 8px 12px;
   white-space: nowrap;
@@ -511,7 +589,7 @@ a {
   stroke: currentColor;
 }
 
-.pill-nav > .pill-cta {
+.pill-nav .island-body > .pill-cta {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -542,12 +620,12 @@ a {
 
 /* Touch screens keep :hover after a tap, so only real pointers get the hover look. */
 @media (hover: hover) {
-  .pill-nav > button:hover,
+  .pill-nav .island-body > button:hover,
   .pill-link:hover,
   .icon-button:hover {
     background: rgba(127, 127, 127, 0.16);
   }
-  .pill-nav > .pill-cta:hover {
+  .pill-nav .island-body > .pill-cta:hover {
     background: var(--cta);
     filter: brightness(1.25);
   }
@@ -610,16 +688,18 @@ a {
   .pill-link {
     display: none;
   }
-  .pill-nav {
+  .dock-nav {
     top: 12px;
+  }
+  .pill-nav .island-body {
     gap: 2px;
     padding: 4px;
   }
-  .pill-nav > button {
+  .pill-nav .island-body > button {
     padding: 8px 9px;
     font-size: 0.9rem;
   }
-  .pill-nav > .pill-cta {
+  .pill-nav .island-body > .pill-cta {
     padding: 8px 8px 8px 12px;
   }
   .sky-status {
@@ -642,39 +722,39 @@ a {
   font-display: swap;
 }
 
-/* Serif title under the nav, like a masthead. */
-.site-title {
-  position: fixed;
-  top: 92px;
-  left: 50%;
-  z-index: 1;
-  translate: -50% 0;
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 1.9rem;
-  font-weight: 400;
-  line-height: 1.1;
-  text-align: center;
-  color: var(--ink);
-  text-shadow: 0 1px 12px var(--paper);
-  pointer-events: none;
+/* For screen readers and search only. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.site-title span {
-  display: block;
-}
-
-/* Frosted hero card, bottom left. */
-.hero-card {
-  position: fixed;
+/* Hero dock, bottom left: it folds into a small "hi" bubble. */
+.dock-hero {
+  --open-radius: 20px;
+  --closed-w: 46px;
+  --closed-h: 46px;
   left: 20px;
   bottom: 20px;
-  z-index: 2;
-  max-width: 460px;
+}
+
+.dock-hero .island,
+.dock-hero .island-body {
+  bottom: 0;
+  left: 0;
+}
+
+.hero-card .island-body {
+  width: min(460px, calc(100vw - 40px));
   padding: 28px 32px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  backdrop-filter: blur(16px);
+}
+
+.hero-card .island-face {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.3rem;
 }
 
 .hero-headline {
@@ -706,15 +786,12 @@ a {
 }
 
 @media (max-width: 768px) {
-  .site-title {
-    top: 96px;
-    font-size: 1.4rem;
-  }
-  .hero-card {
-    right: 12px;
+  .dock-hero {
     left: 12px;
     bottom: 12px;
-    max-width: none;
+  }
+  .hero-card .island-body {
+    width: calc(100vw - 24px);
     padding: 18px 20px;
   }
   .hero-headline {
@@ -733,6 +810,6 @@ a {
 }
 
 /* Hidden under the loading screen anyway; skipping them keeps the first layout short. */
-body:not([data-state="ready"]) :is(.pill-nav, .sky-status, .site-title, .hero-card) {
+body:not([data-state="ready"]) :is(.dock, .sky-status) {
   display: none;
 }

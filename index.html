@@ -54,59 +54,71 @@
       <p class="mobile-instructions instructions">drag to look around, pinch to zoom</p>
     </div>
 
-    <nav class="pill-nav" aria-label="sections" inert>
-      <span class="pill-logo" aria-hidden="true">
-        <svg viewBox="0 0 12 12" shape-rendering="crispEdges"><path d="M5 1h2v2H5zM1 4h3v3H1zM8 4h3v3H8zM3 8h2v3H3zM7 8h2v3H7z" fill="#f0506e" /><path d="M5 5h2v2H5z" fill="#ffb454" /></svg>
-      </span>
-      <button type="button" data-modal="work">work</button>
-      <button type="button" data-modal="about">about</button>
-      <a class="pill-link" href="https://sigdel29.substack.com" target="_blank" rel="noopener noreferrer">writing</a>
-      <span class="pill-icons">
-        <button type="button" class="icon-button mute-toggle-button" aria-label="mute sound" aria-pressed="false">
-          <svg class="sound-svg sound-on-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
-            <path d="M16 9a5 5 0 0 1 0 6" />
-            <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
-          </svg>
-          <svg class="sound-svg sound-off-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
-            <line x1="22" x2="16" y1="9" y2="15" />
-            <line x1="16" x2="22" y1="9" y2="15" />
-          </svg>
-        </button>
-        <button type="button" class="icon-button theme-toggle-button" aria-label="night mode" aria-pressed="false">
-          <svg class="sun-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" />
-            <path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" />
-            <path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" />
-            <path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" />
-            <path d="m19.07 4.93-1.41 1.41" />
-          </svg>
-          <svg class="moon-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-          </svg>
-        </button>
-      </span>
-      <button type="button" class="pill-cta" data-modal="contact">
-        say hey
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" /><path d="m10 8 4 4-4 4" /></svg>
-      </button>
-    </nav>
+    <div class="dock dock-nav">
+      <nav class="pill-nav island" aria-label="sections" inert>
+        <span class="island-face" aria-hidden="true">
+          <svg viewBox="0 0 12 12" shape-rendering="crispEdges"><path d="M5 1h2v2H5zM1 4h3v3H1zM8 4h3v3H8zM3 8h2v3H3zM7 8h2v3H7z" fill="#f0506e" /><path d="M5 5h2v2H5z" fill="#ffb454" /></svg>
+        </span>
+        <div class="island-body">
+          <span class="pill-logo" aria-hidden="true">
+            <svg viewBox="0 0 12 12" shape-rendering="crispEdges"><path d="M5 1h2v2H5zM1 4h3v3H1zM8 4h3v3H8zM3 8h2v3H3zM7 8h2v3H7z" fill="#f0506e" /><path d="M5 5h2v2H5z" fill="#ffb454" /></svg>
+          </span>
+          <button type="button" data-modal="work">work</button>
+          <button type="button" data-modal="about">about</button>
+          <a class="pill-link" href="https://sigdel29.substack.com" target="_blank" rel="noopener noreferrer">writing</a>
+          <span class="pill-icons">
+            <button type="button" class="icon-button mute-toggle-button" aria-label="mute sound" aria-pressed="false">
+              <svg class="sound-svg sound-on-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+                <path d="M16 9a5 5 0 0 1 0 6" />
+                <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+              </svg>
+              <svg class="sound-svg sound-off-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+                <line x1="22" x2="16" y1="9" y2="15" />
+                <line x1="16" x2="22" y1="9" y2="15" />
+              </svg>
+            </button>
+            <button type="button" class="icon-button theme-toggle-button" aria-label="night mode" aria-pressed="false">
+              <svg class="sun-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="m4.93 4.93 1.41 1.41" />
+                <path d="m17.66 17.66 1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="m6.34 17.66-1.41 1.41" />
+                <path d="m19.07 4.93-1.41 1.41" />
+              </svg>
+              <svg class="moon-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+              </svg>
+            </button>
+          </span>
+          <button type="button" class="pill-cta" data-modal="contact">
+            say hey
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" /><path d="m10 8 4 4-4 4" /></svg>
+          </button>
+        </div>
+      </nav>
+    </div>
 
-    <h1 class="site-title">anu sigdel<span>of new york</span></h1>
+    <h1 class="visually-hidden">anu sigdel</h1>
 
-    <section class="hero-card" aria-label="introduction" inert>
-      <h2 class="hero-headline">building agents, weird machines, and things people actually use</h2>
-      <p>i'm anu, building @ lora. start here.</p>
-      <button type="button" class="hero-link" data-modal="about">
-        get to know me
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" /><path d="m10 8 4 4-4 4" /></svg>
-      </button>
-    </section>
+    <div class="dock dock-hero">
+      <section class="hero-card island" aria-label="introduction" inert>
+        <span class="island-face" aria-hidden="true">hi</span>
+        <div class="island-body">
+          <h2 class="hero-headline">building agents, weird machines, and things people actually use</h2>
+          <p>i'm anu, building @ lora. start here.</p>
+          <button type="button" class="hero-link" data-modal="about">
+            get to know me
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" /><path d="m10 8 4 4-4 4" /></svg>
+          </button>
+        </div>
+      </section>
+    </div>
 
     <p class="sky-status" inert>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>

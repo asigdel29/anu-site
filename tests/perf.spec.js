@@ -1,5 +1,5 @@
-// Performance budget: records a Chrome trace of load, enter, idle frames, dialog taps and the theme toggle on
-// a phone profile, and fails if any main-thread task does 20 ms or more of work.
+// Performance budget: records a Chrome trace of load, enter, idle frames, the nav opening, dialogs and the
+// theme toggle on a phone profile, and fails if any main-thread task does 20 ms or more of work.
 // Compositor commits and blocking waits on the GPU process are reported but not counted: in CI they
 // wait on software WebGL (no GPU), which says nothing about the site's own work.
 // PERF_CPU_THROTTLE=4 slows the CPU like a mid-range phone (CI runs at 1x).
@@ -34,14 +34,21 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
   await expect(page.locator(".loading-screen")).toHaveCount(0, { timeout: 15_000 });
   await page.waitForTimeout(2000);
 
+  // A tap on the folded nav plays the "dynamic island" open animation.
+  const navDock = page.locator(".dock-nav");
+  await expect(navDock).toHaveClass(/is-collapsed/, { timeout: 8_000 });
+  await navDock.locator(".island").tap();
+  await page.waitForTimeout(800);
+
+  // Clicks go straight to the buttons: the nav folds again while a dialog is open.
   const nav = page.getByRole("navigation", { name: "sections" });
   for (const name of ["work", "about", "say hey"]) {
-    await nav.getByRole("button", { name }).tap();
+    await nav.getByRole("button", { name }).dispatchEvent("click");
     await page.waitForTimeout(400);
     await page.keyboard.press("Escape");
     await page.waitForTimeout(400);
   }
-  await page.getByRole("button", { name: "night mode" }).tap();
+  await page.getByRole("button", { name: "night mode" }).dispatchEvent("click");
   await page.waitForTimeout(1500);
 
   const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
