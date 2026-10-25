@@ -52,7 +52,7 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
       const commitTime = commits
         .filter((commit) => commit.ts >= task.ts && commit.ts + commit.dur <= task.ts + task.dur)
         .reduce((sum, commit) => sum + commit.dur, 0);
-      return { ts: task.ts, work: (task.dur - commitTime) / 1000, commit: commitTime / 1000 };
+      return { ts: task.ts, dur: task.dur, work: (task.dur - commitTime) / 1000, commit: commitTime / 1000 };
     });
   const durations = tasks.map((task) => task.work).sort((a, b) => b - a);
   const longestCommit = Math.max(0, ...tasks.map((task) => task.commit));
@@ -66,6 +66,17 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
       `${frames.length} frames, p95 ${frames[Math.floor(frames.length * 0.95)]?.toFixed(2)} ms; ` +
       `longest commit wait ${longestCommit.toFixed(1)} ms`
   );
+  // Name what the three longest tasks spent their time on, so a CI failure explains itself.
+  for (const task of [...tasks].sort((x, y) => y.work - x.work).slice(0, 3)) {
+    const parts = onMain
+      .filter((e) => e.ts >= task.ts && e.ts + e.dur <= task.ts + task.dur && e.dur > 1000)
+      .filter((e) => e.name !== "RunTask" && e.name !== "Commit")
+      .sort((x, y) => y.dur - x.dur)
+      .slice(0, 5)
+      .map((e) => `${e.name}${e.args?.data?.functionName ? `(${e.args.data.functionName})` : ""} ${(e.dur / 1000).toFixed(1)}`);
+    console.log(`  ${task.work.toFixed(1)} ms: ${parts.join(", ")}`);
+  }
+
   const slow = tasks
     .filter((task) => task.work >= BUDGET_MS)
     .map((task) => `${task.work.toFixed(1)} ms at ${task.ts}`);
