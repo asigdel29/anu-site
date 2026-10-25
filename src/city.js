@@ -284,6 +284,45 @@ export function layoutCity(seed = 1625) {
   return buildings.filter((lot) => !underLandmark(lot)).concat(LANDMARKS);
 }
 
+/** Ellipses in Central Park (centre x, z, radius x, z) at their real streets: water, then open lawns. */
+export const PARK_WATER = [
+  [0, (blockSouthOf(96) + blockSouthOf(86)) / 2, 30, 36], // the Reservoir, 86th to 96th Street
+  [-10, (blockSouthOf(77) + blockSouthOf(72)) / 2, 16, 12], // the Lake
+  [26, blockSouthOf(60), 7, 4], // the Pond
+];
+export const PARK_LAWNS = [
+  [0, (blockSouthOf(85) + blockSouthOf(79)) / 2, 16, 20], // the Great Lawn
+  [-14, (blockSouthOf(69) + blockSouthOf(66)) / 2, 12, 8], // Sheep Meadow
+];
+
+/** True inside any of the ellipses, grown by margin metres. */
+function inEllipses(x, z, ellipses, margin = 0) {
+  return ellipses.some(([cx, cz, rx, rz]) => ((x - cx) / (rx + margin)) ** 2 + ((z - cz) / (rz + margin)) ** 2 < 1);
+}
+
+/** Tree colours by index (sRGB): four greens, two cherry blossom pinks, and white pear blossom. */
+export const TREE_PALETTE = ["#5E9A4E", "#6FA85A", "#4F8A48", "#83B565", "#F08AA0", "#F6A9B8", "#F4EFE6"];
+
+/**
+ * Plants Central Park on a jittered 3.2 m grid, leaving the water and the lawns open.
+ * Returns packed trees: x, z, crown radius, colour index.
+ */
+export function layoutTrees(seed = 1858) {
+  const random = seeded(seed);
+  const trees = [];
+  for (let x = PARK.minX + 1.5; x < PARK.maxX - 1; x += 3.2) {
+    for (let z = PARK.minZ + 1.5; z < PARK.maxZ - 1; z += 3.2) {
+      const tx = x + (random() - 0.5) * 2.4;
+      const tz = z + (random() - 0.5) * 2.4;
+      if (random() < 0.15 || !inPark(tx, tz, -1) || inEllipses(tx, tz, PARK_WATER, 1.5) || inEllipses(tx, tz, PARK_LAWNS)) continue;
+      const roll = random();
+      const color = roll < 0.7 ? Math.floor(random() * 4) : roll < 0.92 ? 4 + Math.floor(random() * 2) : 6;
+      trees.push(tx, tz, 1.3 + random() * 1.1, color);
+    }
+  }
+  return new Float32Array(trees);
+}
+
 /** Packs building records into the typed arrays the instanced mesh reads. */
 export function packCity(buildings) {
   const footprint = new Float32Array(buildings.length * 4);

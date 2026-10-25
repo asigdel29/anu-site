@@ -9,7 +9,9 @@ import {
   CAMERA_CLEARANCE,
   LANDMARKS,
   LOW_RISE_LIMIT,
+  PARK_WATER,
   inPark,
+  layoutTrees,
   layoutCity,
   manhattanHalfWidth,
   packCity,
@@ -57,4 +59,14 @@ test("packing keeps one entry per building", () => {
   assert.equal(footprint.length, buildings.length * 4);
   assert.equal(shape.length, buildings.length * 4);
   assert.equal(look.length, buildings.length * 4);
+});
+
+test("trees grow in the park and never in its water", () => {
+  const trees = layoutTrees();
+  assert.ok(trees.length / 4 > 800 && trees.length / 4 < 2500, `${trees.length / 4} trees`);
+  for (let i = 0; i < trees.length; i += 4) {
+    const [x, z] = [trees[i], trees[i + 1]];
+    assert.ok(inPark(x, z), `tree outside the park at ${x}, ${z}`);
+    for (const [cx, cz, rx, rz] of PARK_WATER) assert.ok(((x - cx) / rx) ** 2 + ((z - cz) / rz) ** 2 >= 1, `tree in water at ${x}, ${z}`);
+  }
 });
