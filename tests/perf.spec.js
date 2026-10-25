@@ -1,4 +1,4 @@
-// Performance budget: records a Chrome trace of load, enter and idle frames on
+// Performance budget: records a Chrome trace of load, enter, idle frames and the theme toggle on
 // a phone profile, and fails if any main-thread task does 20 ms or more of work.
 // Compositor commits are reported but not counted: in CI they wait on software WebGL (no GPU),
 // which says nothing about the site's own work.
@@ -28,6 +28,8 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
   await expect(page.locator(".loading-screen")).toHaveCount(0, { timeout: 15_000 });
   await page.waitForTimeout(2000);
 
+  await page.getByRole("button", { name: "night mode" }).tap();
+  await page.waitForTimeout(1500);
 
   const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
   const mainThread = events.find(

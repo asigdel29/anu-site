@@ -2,7 +2,7 @@
 // the loading screen, the intro, object clicks, dialogs and toggles.
 
 import { revealIsland, waitForEnter } from "./loading.js";
-import { loadIsland } from "./island.js";
+import { islandMaterials, loadIsland } from "./island.js";
 import { prefersReducedMotion } from "./motion.js";
 import { createPetals, fitPetalsToCanopy } from "./petals.js";
 import {
@@ -21,14 +21,17 @@ import {
   isMobile,
   renderer,
   scene,
+  SKY_COLORS,
   startLoop,
   warmUp,
   yieldToMain,
 } from "./scene.js";
+import { playClick, setMuted, startMusic, stepTheme, theme } from "./toggles.js";
 
 const label = document.querySelector(".object-label");
 /** Created once the renderer exists (it needs the pixel ratio). */
 let petals;
+let themedMaterials = [];
 
 let hasRevealed = false;
 /** Clicks and hovers pause under the loading screen and while a dialog is open. */
@@ -37,6 +40,7 @@ const isBlocked = () => !hasRevealed;
 /** Runs an object's action. Links open now; dialogs arrive with the dialog code. */
 function runAction(action) {
   if (!action) return;
+  playClick();
   if (action.url) window.open(action.url, "_blank", "noopener,noreferrer");
 }
 
@@ -45,6 +49,10 @@ setupPicking(canvas, camera, { isBlocked, onAction: runAction });
 function onFrame(time, delta) {
   // Reduced motion freezes the petals in place instead of hiding them.
   if (!prefersReducedMotion) petals.material.uniforms.uTime.value = time;
+  if (stepTheme(delta)) {
+    for (const material of themedMaterials) material.uniforms.uMixRatio.value = theme.mix;
+    scene.background.lerpColors(SKY_COLORS.day, SKY_COLORS.night, theme.mix);
+  }
   animateProps(time, delta, getHoveredObject());
   updatePicking(camera, label, isBlocked());
 }
@@ -55,6 +63,7 @@ async function boot() {
   controls.addEventListener("change", requestRaycast);
   petals = createPetals(isMobile ? 120 : 300, renderer.getPixelRatio());
   scene.add(petals.points);
+  themedMaterials = [...islandMaterials, petals.material];
 
   const island = await loadIsland({ scene, camera, renderer, yieldToMain });
   for (const mesh of island.children) {
@@ -69,11 +78,13 @@ async function boot() {
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
-  await waitForEnter();
+  const withSound = await waitForEnter();
+  if (withSound) startMusic();
+  else setMuted(true);
 
   await revealIsland();
   hasRevealed = true;
-  document.querySelector("#experience").inert = false;
+  for (const element of document.querySelectorAll("#experience, .toggle-buttons")) element.inert = false;
   startIntro(performance.now() / 1000);
 }
 
