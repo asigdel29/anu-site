@@ -26,7 +26,7 @@ test("island loads and every section opens from the nav", async ({ page }) => {
   );
   const started = Date.now();
   await page.goto("/");
-  await expect(page.getByText("hey, give the petals a second")).toBeVisible();
+  await expect(page.getByText("hey, give the city a second")).toBeVisible();
 
   const enter = page.getByRole("button", { name: "enter", exact: true });
   await expect(enter).toBeEnabled({ timeout: 15_000 });

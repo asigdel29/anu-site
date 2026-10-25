@@ -1,29 +1,17 @@
-// Entry point for anu's cherry blossom island: boots the scene in small steps, then wires
-// the loading screen, the intro, object clicks, dialogs and toggles.
+// Entry point for anu's island over New York: boots the scene in small steps, then wires
+// the loading screen, the live weather, dialogs and toggles.
 
 import { Color } from "three";
 
 import { createClouds, setCloudWeather } from "./clouds.js";
 import { revealIsland, waitForEnter } from "./loading.js";
-import { islandMaterials, loadIsland } from "./island.js";
-import { isModalOpen, setBackgroundInert, showModal } from "./modals.js";
+import { islandMaterial, loadIsland } from "./island.js";
+import { setBackgroundInert } from "./modals.js";
 import { prefersReducedMotion } from "./motion.js";
-import { createPetals, fitPetalsToCanopy } from "./petals.js";
 import { createPrecipitation, setPrecipitation } from "./precipitation.js";
 import { createSkyline, setSkylineWeather } from "./skyline.js";
-import { createWalkers, obstacleFor, stepWalkers } from "./walkers.js";
-import {
-  addHitbox,
-  getHoveredObject,
-  requestRaycast,
-  setupPicking,
-  updatePicking,
-} from "./picking.js";
-import { addProp, animateProps, startIntro } from "./props.js";
 import {
   camera,
-  canvas,
-  controls,
   initScene,
   isMobile,
   renderer,
@@ -33,9 +21,9 @@ import {
   warmUp,
   yieldToMain,
 } from "./scene.js";
-import { playClick, setMuted, setNight, startMusic, stepTheme, theme } from "./toggles.js";
+import { setMuted, setNight, startMusic, stepTheme, theme } from "./toggles.js";
 import { noteWeather, showWeather, startClock } from "./status.js";
-import { fetchWeather, windVector } from "./weather.js";
+import { fetchWeather } from "./weather.js";
 
 /** How often the live weather refreshes. */
 const WEATHER_REFRESH_MS = 15 * 60 * 1000;
@@ -44,44 +32,23 @@ const GLOOM_SKY = { day: new Color("#9aa5b1"), night: new Color("#15151f") };
 /** Current sky colours for day and night, after the weather's gloom. */
 const sky = { day: SKY_COLORS.day.clone(), night: SKY_COLORS.night.clone() };
 
-const label = document.querySelector(".object-label");
 /** Created once the renderer exists (it needs the pixel ratio). */
-let petals;
 let clouds;
 let precipitation;
 let skyline;
-let walkers;
 let themedMaterials = [];
 
-let hasRevealed = false;
-/** Clicks and hovers pause under the loading screen and while a dialog is open. */
-const isBlocked = () => !hasRevealed || isModalOpen();
-
-/** Runs an object's action: open its link in a new tab, or its dialog. */
-function runAction(action) {
-  if (!action) return;
-  playClick();
-  if (action.url) window.open(action.url, "_blank", "noopener,noreferrer");
-  else showModal(action.modal);
-}
-
-setupPicking(canvas, camera, { isBlocked, onAction: runAction });
-
 function onFrame(time, delta) {
-  // Reduced motion freezes petals and clouds in place instead of hiding them.
+  // Reduced motion freezes clouds and rain in place instead of hiding them.
   if (!prefersReducedMotion) {
-    petals.material.uniforms.uTime.value = time;
     clouds.material.uniforms.uTime.value = time;
     precipitation.material.uniforms.uTime.value = time;
   }
   if (skyline) skyline.material.uniforms.uTime.value = time;
-  if (walkers && !prefersReducedMotion) stepWalkers(walkers, delta);
   if (stepTheme(delta)) {
     for (const material of themedMaterials) material.uniforms.uMixRatio.value = theme.mix;
     paintSky();
   }
-  animateProps(time, delta, getHoveredObject());
-  updatePicking(camera, label, isBlocked());
 }
 
 function paintSky() {
@@ -95,7 +62,6 @@ function applyWeather(weather, isFirst) {
   setCloudWeather(clouds, weather);
   setPrecipitation(precipitation, weather);
   if (skyline) setSkylineWeather(skyline, weather);
-  petals.material.uniforms.uWind.value = windVector(weather.windDegrees, weather.windMph * 0.03);
   sky.day.lerpColors(SKY_COLORS.day, GLOOM_SKY.day, weather.gloom);
   sky.night.lerpColors(SKY_COLORS.night, GLOOM_SKY.night, weather.gloom);
   paintSky();
@@ -104,41 +70,22 @@ function applyWeather(weather, isFirst) {
   if (isFirst) setNight(!weather.isDay);
 }
 
-/** Loads in small tasks, waits for "enter", then reveals the island and starts the intro. */
+/** Loads in small tasks, waits for "enter", then reveals the island. */
 async function boot() {
   startClock();
   const weatherRequest = fetchWeather();
   const skylineRequest = createSkyline(new Color());
   await initScene();
-  await yieldToMain("petals");
-  controls.addEventListener("change", requestRaycast);
-  petals = createPetals(isMobile ? 120 : 300, renderer.getPixelRatio());
-  scene.add(petals.points);
   await yieldToMain("clouds");
   clouds = createClouds();
   scene.add(clouds.mesh);
   await yieldToMain("rain and snow");
   precipitation = createPrecipitation(isMobile ? 600 : 1500, renderer.getPixelRatio());
   scene.add(precipitation.points);
-  themedMaterials = [...islandMaterials, petals.material, clouds.material, precipitation.material];
+  themedMaterials = [islandMaterial, clouds.material, precipitation.material];
 
   const island = await loadIsland({ scene, camera, renderer, yieldToMain });
-  // Walkers keep out of the trunk and every prop.
-  const obstacles = [{ x: 0, z: 0, r: 0.9 }];
-  for (const mesh of island.children) {
-    if (mesh.name.includes("Canopy")) fitPetalsToCanopy(petals, mesh);
-    if (mesh.name.includes("Raycaster")) {
-      obstacles.push(obstacleFor(mesh));
-      // Hitbox first: it is measured at the rest pose, before the intro hides the prop.
-      addHitbox(mesh, scene);
-      addProp(mesh);
-    }
-  }
   await yieldToMain("load island");
-  walkers = createWalkers(obstacles);
-  scene.add(walkers.group);
-  themedMaterials.push(walkers.material);
-  await yieldToMain("walkers");
 
   skyline = await skylineRequest;
   scene.add(skyline.mesh);
@@ -148,7 +95,7 @@ async function boot() {
 
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
-  await warmUp([...island.children, petals.points, clouds.mesh, precipitation.points, skyline.mesh, walkers.group]);
+  await warmUp([...island.children, clouds.mesh, precipitation.points, skyline.mesh]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
@@ -157,9 +104,7 @@ async function boot() {
   else setMuted(true);
 
   await revealIsland();
-  hasRevealed = true;
   setBackgroundInert(false);
-  startIntro(performance.now() / 1000);
   noteWeather(await weatherRequest);
 }
 

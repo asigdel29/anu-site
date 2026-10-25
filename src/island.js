@@ -1,4 +1,4 @@
-// Loads the island model and its baked day/night atlases without long main-thread tasks.
+// Loads the island model and its baked day/night atlas without long main-thread tasks.
 
 import {
   Box3,
@@ -18,9 +18,6 @@ import {
 import vertexShader from "./shaders/theme/vertex.glsl?raw";
 import fragmentShader from "./shaders/theme/fragment.glsl?raw";
 
-/** Baked atlas names; each is a substring of the mesh names that use it. */
-const ATLASES = ["First", "Second"];
-
 /** Phones and small tablets get the smaller atlases to stay inside iOS GPU limits. */
 const TEXTURE_TIER =
   Math.min(screen.width, screen.height) < 768 ? "mobile" : "desktop";
@@ -31,19 +28,16 @@ const bitmapLoader = new ImageBitmapLoader().setOptions({
   premultiplyAlpha: "none",
 });
 
-/** One day/night blend material per atlas; the theme drives uMixRatio. */
-export const islandMaterials = ATLASES.map(
-  () =>
-    new ShaderMaterial({
-      uniforms: {
-        uDayTexture: { value: null },
-        uNightTexture: { value: null },
-        uMixRatio: { value: 0 },
-      },
-      vertexShader,
-      fragmentShader,
-    })
-);
+/** Day/night blend of the baked atlas; the theme drives uMixRatio. */
+export const islandMaterial = new ShaderMaterial({
+  uniforms: {
+    uDayTexture: { value: null },
+    uNightTexture: { value: null },
+    uMixRatio: { value: 0 },
+  },
+  vertexShader,
+  fragmentShader,
+});
 
 /**
  * Reads the mesh pack written by tools/blender/bake_export.py: a uint32 header length, a
@@ -80,10 +74,8 @@ async function loadMeshPack(url) {
   return root;
 }
 
-async function loadAtlas(mode, atlas) {
-  const bitmap = await bitmapLoader.loadAsync(
-    `/textures/island/${mode}/${atlas.toLowerCase()}_${TEXTURE_TIER}.webp`
-  );
+async function loadAtlas(mode) {
+  const bitmap = await bitmapLoader.loadAsync(`/textures/island/${mode}/first_${TEXTURE_TIER}.webp`);
   const texture = new Texture(bitmap);
   texture.flipY = false;
   texture.colorSpace = SRGBColorSpace;
@@ -94,24 +86,19 @@ async function loadAtlas(mode, atlas) {
 }
 
 /**
- * Loads the model and atlases, uploads each texture in its own task and compiles shaders
+ * Loads the model and atlas, uploads each texture in its own task and compiles shaders
  * without blocking, then adds the island to the scene and returns its root.
  */
 export async function loadIsland({ scene, camera, renderer, yieldToMain }) {
   const [island, ...textures] = await Promise.all([
     loadMeshPack("/models/island.bin"),
-    ...ATLASES.flatMap((atlas) => [loadAtlas("day", atlas), loadAtlas("night", atlas)]),
+    loadAtlas("day"),
+    loadAtlas("night"),
   ]);
 
-  islandMaterials.forEach((material, index) => {
-    material.uniforms.uDayTexture.value = textures[index * 2];
-    material.uniforms.uNightTexture.value = textures[index * 2 + 1];
-  });
-
-  for (const mesh of island.children) {
-    const index = ATLASES.findIndex((atlas) => mesh.name.includes(atlas));
-    if (index >= 0) mesh.material = islandMaterials[index];
-  }
+  islandMaterial.uniforms.uDayTexture.value = textures[0];
+  islandMaterial.uniforms.uNightTexture.value = textures[1];
+  for (const mesh of island.children) mesh.material = islandMaterial;
 
   for (const texture of textures) {
     renderer.initTexture(texture);

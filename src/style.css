@@ -79,29 +79,6 @@ a {
     transition-duration: 1ms !important;
   }
 }
-/* Label that follows the hovered 3D object. */
-.object-label {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  padding: 4px 10px;
-  font-family: "Space Grotesk", system-ui, sans-serif;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--ink);
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.object-label.is-visible {
-  opacity: 1;
-}
 /* Loading screen: a night sky with the serif title; it fades away after "enter". */
 .loading-screen {
   position: fixed;
