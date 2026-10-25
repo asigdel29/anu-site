@@ -183,3 +183,70 @@ a {
     display: block;
   }
 }
+/* Sound and theme toggles. */
+.toggle-buttons {
+  position: fixed;
+  top: 32px;
+  z-index: 2;
+  display: flex;
+  padding: 10px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 1rem;
+  box-shadow: rgba(0, 0, 0, 0.18) 0 3px 8px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toggle-buttons svg {
+  width: 28px;
+  height: 28px;
+  stroke: currentColor;
+}
+
+.mute-toggle-button {
+  right: 104px;
+}
+
+.theme-toggle-button {
+  right: 32px;
+}
+
+.toggle-buttons:active {
+  transform: scale(0.9);
+}
+
+/* Icons follow state: no script swaps them. */
+.sound-off-svg,
+.moon-svg,
+.mute-toggle-button[aria-pressed="true"] .sound-on-svg,
+.dark-theme .sun-svg {
+  display: none;
+}
+.mute-toggle-button[aria-pressed="true"] .sound-off-svg,
+.dark-theme .moon-svg {
+  display: block;
+}
+
+@media (hover: hover) {
+  .toggle-buttons:hover {
+    transform: scale(1.15);
+  }
+}
+
+@media (max-width: 768px) {
+  .toggle-buttons {
+    top: 20px;
+    padding: 8px;
+  }
+  .toggle-buttons svg {
+    width: 22px;
+    height: 22px;
+  }
+  .mute-toggle-button {
+    right: 72px;
+  }
+  .theme-toggle-button {
+    right: 16px;
+  }
+}
