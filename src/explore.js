@@ -78,6 +78,8 @@ function placeMarker(camera) {
     visibleMarker = id;
   }
   if (!id) return;
+  // lookAt sets the new rotation after it updates the matrices, so update them before projecting.
+  camera.updateMatrixWorld();
   point.copy(anchors.get(id)).project(camera);
   const x = ((point.x + 1) / 2) * viewWidth;
   const y = ((1 - point.y) / 2) * viewHeight;
