@@ -1,8 +1,10 @@
 // The New York around the island: every building from src/city.js in one instanced draw call,
-// coloured for day or night and hazed toward the live sky by its shader.
+// and the street-level ground with Central Park and the rivers. Both shaders share one set of
+// uniforms, so day, night and weather change them together.
 
 import {
   BoxGeometry,
+  CircleGeometry,
   Color,
   Group,
   InstancedBufferAttribute,
@@ -11,13 +13,31 @@ import {
   ShaderMaterial,
 } from "three";
 
-import { GROUND_Y, PALETTE } from "./city.js";
+import {
+  AVENUE_ORIGIN,
+  AVENUE_SPACING,
+  AVENUE_WIDTH,
+  BOROUGH_EDGE,
+  GROUND_Y,
+  MANHATTAN,
+  PALETTE,
+  PARK,
+  STREET_SPACING,
+  STREET_WIDTH,
+} from "./city.js";
 import hazeShader from "./shaders/city/haze.glsl?raw";
 import buildingVertex from "./shaders/city/building.vert?raw";
 import buildingFragment from "./shaders/city/building.frag?raw";
+import groundVertex from "./shaders/city/ground.vert?raw";
+import groundFragment from "./shaders/city/ground.frag?raw";
 
 /** Turns the city so Midtown (south, +z in city space) stands behind the island in the opening view. */
 const CITY_HEADING = Math.atan2(-18, -20.5);
+/** The ground reaches past the haze, so its edge is never seen. */
+const GROUND_RADIUS = 700;
+
+/** Writes numbers as a GLSL vector literal for a define. */
+const vec = (...values) => `vec${values.length}(${values.map((v) => v.toFixed(2)).join(", ")})`;
 
 /** Lays the city out in a worker; resolves with the packed instance arrays. */
 function layoutInWorker() {
@@ -54,7 +74,28 @@ function createBuildings(uniforms, { footprint, shape, look }) {
   return mesh;
 }
 
-/** Builds the city group; the layout runs off the main thread. */
+function createGround(uniforms) {
+  const material = new ShaderMaterial({
+    uniforms,
+    defines: {
+      PARK: vec(PARK.minX, PARK.maxX, PARK.minZ, PARK.maxZ),
+      MANHATTAN: vec(MANHATTAN.north, MANHATTAN.south, MANHATTAN.halfWidth, MANHATTAN.taper),
+      GRID: vec(AVENUE_SPACING, AVENUE_WIDTH, STREET_SPACING, STREET_WIDTH),
+      BOROUGH_EDGE: BOROUGH_EDGE.toFixed(1),
+      AVENUE_ORIGIN: AVENUE_ORIGIN.toFixed(1),
+    },
+    vertexShader: groundVertex,
+    fragmentShader: hazeShader + groundFragment,
+  });
+  const ground = new Mesh(new CircleGeometry(GROUND_RADIUS, 72).rotateX(-Math.PI / 2), material);
+  ground.position.y = GROUND_Y;
+  return ground;
+}
+
+/**
+ * Builds the city group off the main thread. The returned material is the buildings'; its
+ * uniforms (uMixRatio, uTime, uSky, uHaze) are shared with the ground, so one update sets both.
+ */
 export async function createSkyline() {
   const uniforms = {
     uMixRatio: { value: 0 },
@@ -65,7 +106,7 @@ export async function createSkyline() {
   };
   const buildings = createBuildings(uniforms, await layoutInWorker());
   const group = new Group();
-  group.add(buildings);
+  group.add(createGround(uniforms), buildings);
   group.rotation.y = CITY_HEADING;
   return { group, material: buildings.material };
 }
