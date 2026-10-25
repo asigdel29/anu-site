@@ -6,7 +6,7 @@ Run from the repo root:
 
 Outputs:
     public/models/island.bin
-    public/textures/island/{day,night}/{first,second}_{desktop,mobile}.webp
+    public/textures/island/{day,night}/first_{desktop,mobile}.webp
 
 Rules this script keeps:
 - Each atlas set gets one shared UV map named "Bake". If any object lacks it, the whole set is
@@ -33,7 +33,7 @@ MESH_PATH = ROOT / "public" / "models" / "island.bin"
 TEXTURE_DIR = ROOT / "public" / "textures" / "island"
 
 # Atlas name -> collection that holds its objects. Atlas names are also mesh-name tokens.
-SETS = {"First": "Set_First", "Second": "Set_Second"}
+SETS = {"First": "Set_First"}
 MOBILE_MAX = 2048
 
 
@@ -77,7 +77,7 @@ def ensure_uvs(atlas):
     bpy.ops.uv.average_islands_scale()
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    # Per-object texel weight: big, plain surfaces (clouds, canopy) give pixels to the grass and props.
+    # Per-object texel weight: the plain brick pillars give pixels to the grass top.
     # Weights are divided by the largest one so every UV stays inside the 0-1 tile; the packer
     # would otherwise put them in another UDIM tile, which wraps onto other islands.
     heaviest = max(obj.get("texel_weight", 1.0) for obj in objects)
@@ -148,24 +148,19 @@ def write_webp(png_path, atlas, mode, size):
                     str(png_path), "-o", str(out_dir / f"{stem}_mobile.webp")], check=True)
 
 
-def is_static(obj):
-    """Static meshes are joined into one mesh per atlas; interactive ones and the canopy stay separate."""
-    return not any(token in obj.name for token in ("Raycaster", "Canopy"))
-
-
 def prepare_for_export():
-    """Joins static meshes per atlas, keeps only the Bake UV map and strips materials (in memory only)."""
+    """Joins each atlas set into one mesh named after it, keeps only the Bake UV map and strips materials.
+
+    In memory only: the .blend is never saved after this.
+    """
     exported = []
     for atlas in SETS:
-        objects = set_objects(atlas)
-        static = [o for o in objects if is_static(o)]
-        if static:
-            select_only(static)
-            bpy.ops.object.join()
-            joined = bpy.context.view_layer.objects.active
-            joined.name = atlas
-            joined.data.name = atlas
-        exported += set_objects(atlas)
+        select_only(set_objects(atlas))
+        bpy.ops.object.join()
+        joined = bpy.context.view_layer.objects.active
+        joined.name = atlas
+        joined.data.name = atlas
+        exported.append(joined)
 
     for obj in exported:
         mesh = obj.data

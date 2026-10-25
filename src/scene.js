@@ -4,7 +4,7 @@ import { Color, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 /**
- * True on phone-sized screens; drives framing, petal count and pixel ratio.
+ * True on phone-sized screens; drives framing, rain count and pixel ratio.
  * matchMedia avoids reading innerWidth at startup, which would force an early layout.
  */
 export const isMobile = window.matchMedia("(max-width: 767px)").matches;
