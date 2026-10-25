@@ -6,28 +6,29 @@ const FORECAST_URL =
   "&current=temperature_2m,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,is_day" +
   "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York";
 
-/** Groups WMO weather codes into what the scene can show, with a short label. */
+/** Groups WMO weather codes into what the scene can show, with a label and a sayable phrase. */
 export function describeWeather(code) {
-  if (code === 0) return { kind: "clear", label: "clear" };
-  if (code <= 2) return { kind: "clear", label: "partly cloudy" };
-  if (code === 3) return { kind: "cloudy", label: "overcast" };
-  if (code === 45 || code === 48) return { kind: "fog", label: "fog" };
-  if (code >= 51 && code <= 57) return { kind: "rain", label: "drizzle" };
-  if (code >= 61 && code <= 67) return { kind: "rain", label: "rain" };
-  if (code >= 71 && code <= 77) return { kind: "snow", label: "snow" };
-  if (code >= 80 && code <= 82) return { kind: "rain", label: "showers" };
-  if (code >= 85 && code <= 86) return { kind: "snow", label: "snow showers" };
-  if (code >= 95) return { kind: "storm", label: "thunderstorm" };
-  return { kind: "cloudy", label: "cloudy" };
+  if (code === 0) return { kind: "clear", label: "clear", phrase: "clear" };
+  if (code <= 2) return { kind: "clear", label: "partly cloudy", phrase: "partly cloudy" };
+  if (code === 3) return { kind: "cloudy", label: "overcast", phrase: "overcast" };
+  if (code === 45 || code === 48) return { kind: "fog", label: "fog", phrase: "foggy" };
+  if (code >= 51 && code <= 57) return { kind: "rain", label: "drizzle", phrase: "drizzling" };
+  if (code >= 61 && code <= 67) return { kind: "rain", label: "rain", phrase: "raining" };
+  if (code >= 71 && code <= 77) return { kind: "snow", label: "snow", phrase: "snowing" };
+  if (code >= 80 && code <= 82) return { kind: "rain", label: "showers", phrase: "showery" };
+  if (code >= 85 && code <= 86) return { kind: "snow", label: "snow showers", phrase: "snowing" };
+  if (code >= 95) return { kind: "storm", label: "thunderstorm", phrase: "stormy" };
+  return { kind: "cloudy", label: "cloudy", phrase: "cloudy" };
 }
 
 /** Turns an Open-Meteo `current` block into the settings the scene uses. */
 export function sceneWeather(current) {
-  const { kind, label } = describeWeather(current.weather_code);
+  const { kind, label, phrase } = describeWeather(current.weather_code);
   const wet = kind === "rain" || kind === "storm" || kind === "snow";
   return {
     kind,
     label,
+    phrase,
     temperatureF: Math.round(current.temperature_2m),
     isDay: current.is_day === 1,
     cover: current.cloud_cover / 100,

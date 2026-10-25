@@ -583,6 +583,58 @@ a {
   }
 }
 
+/* New York time and weather, top right. */
+.sky-status {
+  position: fixed;
+  top: 28px;
+  right: 24px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--ink);
+  text-shadow: 0 1px 6px var(--paper);
+}
+
+.sky-status svg {
+  width: 15px;
+  height: 15px;
+}
+
+.status-place,
+.status-weather {
+  color: var(--muted);
+}
+
+/* A one-time note that the weather is live, styled like a quiet toast. */
+.weather-note {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 12px 18px;
+  font-size: 0.9rem;
+  color: #171717;
+  background: #fefffc;
+  border-radius: 10px;
+  box-shadow: rgba(0, 0, 0, 0.12) 0 6px 20px;
+}
+
+.weather-note[hidden] {
+  display: none;
+}
+
+.weather-note svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
 @media (max-width: 768px) {
   .pill-logo,
   .pill-link {
@@ -600,4 +652,22 @@ a {
   .pill-nav > .pill-cta {
     padding: 8px 8px 8px 12px;
   }
+  .sky-status {
+    top: 66px;
+    right: 50%;
+    translate: 50% 0;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .weather-note {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("/fonts/instrument-serif-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
 }
