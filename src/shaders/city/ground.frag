@@ -15,18 +15,6 @@ float inEllipse(vec4 ellipse)
     return step(length((vCity.xz - ellipse.xy) / ellipse.zw), 1.0);
 }
 
-// Running integral of a pulse that is 1 on [from, to] in every unit cell.
-float pulseIntegral(float x, float from, float to)
-{
-    return floor(x) * (to - from) + clamp(fract(x), from, to) - from;
-}
-
-float filteredPulse(float x, float width, float from, float to)
-{
-    width = max(width, 1e-4);
-    return (pulseIntegral(x + 0.5 * width, from, to) - pulseIntegral(x - 0.5 * width, from, to)) / width;
-}
-
 void main()
 {
     float x = vCity.x;

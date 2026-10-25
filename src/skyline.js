@@ -35,8 +35,9 @@ import {
   STREET_SPACING,
   STREET_WIDTH,
   TREE_PALETTE,
+  buildCityArrays,
 } from "./city.js";
-import hazeShader from "./shaders/city/haze.glsl?raw";
+import commonShader from "./shaders/city/common.glsl?raw";
 import buildingVertex from "./shaders/city/building.vert?raw";
 import buildingFragment from "./shaders/city/building.frag?raw";
 import groundVertex from "./shaders/city/ground.vert?raw";
@@ -59,13 +60,14 @@ const vec = (...values) => `vec${values.length}(${values.map((v) => v.toFixed(2)
 
 /** Lays the city out in a worker; resolves with the packed instance arrays. */
 function layoutInWorker() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const worker = new Worker(new URL("./city.worker.js", import.meta.url), { type: "module" });
     worker.onmessage = (event) => {
       resolve(event.data);
       worker.terminate();
     };
-    worker.onerror = reject;
+    // Browsers without module workers build it here instead: one long task, but the city still shows.
+    worker.onerror = () => resolve(buildCityArrays());
   });
 }
 
@@ -83,7 +85,7 @@ function createBuildings(uniforms, { footprint, shape, look }) {
       uPalette: { value: srgb(PALETTE) },
     },
     vertexShader: buildingVertex,
-    fragmentShader: hazeShader + buildingFragment,
+    fragmentShader: commonShader + buildingFragment,
   });
   const mesh = new Mesh(geometry, material);
   // The shader places every box, so the unit box's bounds say nothing useful.
@@ -99,7 +101,7 @@ function createTrees(uniforms, trees) {
   const material = new ShaderMaterial({
     uniforms: { ...uniforms, uTreePalette: { value: srgb(TREE_PALETTE) } },
     vertexShader: treeVertex,
-    fragmentShader: hazeShader + treeFragment,
+    fragmentShader: commonShader + treeFragment,
   });
   const mesh = new Mesh(geometry, material);
   mesh.frustumCulled = false;
@@ -115,7 +117,7 @@ function createLights(uniforms, lights) {
   const material = new ShaderMaterial({
     uniforms: { ...uniforms, uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) } },
     vertexShader: lightVertex,
-    fragmentShader: hazeShader + lightFragment,
+    fragmentShader: commonShader + lightFragment,
     transparent: true,
     depthWrite: false,
     blending: AdditiveBlending,
@@ -142,7 +144,7 @@ function createGround(uniforms) {
       AVENUE_ORIGIN: AVENUE_ORIGIN.toFixed(1),
     },
     vertexShader: groundVertex,
-    fragmentShader: hazeShader + groundFragment,
+    fragmentShader: commonShader + groundFragment,
   });
   const ground = new Mesh(new CircleGeometry(GROUND_RADIUS, 72).rotateX(-Math.PI / 2), material);
   ground.position.y = GROUND_Y;

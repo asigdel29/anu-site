@@ -384,3 +384,9 @@ export function packCity(buildings) {
   });
   return { footprint, shape, look };
 }
+
+/** Everything the city meshes read: packed buildings, trees and aviation lights. */
+export function buildCityArrays() {
+  const buildings = layoutCity();
+  return { ...packCity(buildings), trees: layoutTrees(), lights: layoutLights(buildings) };
+}

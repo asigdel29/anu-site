@@ -25,19 +25,6 @@ float hash(vec2 p)
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-// Running integral of a pulse that is 1 on [from, to] in every unit cell.
-float pulseIntegral(float x, float from, float to)
-{
-    return floor(x) * (to - from) + clamp(fract(x), from, to) - from;
-}
-
-// The pulse averaged over one pixel's width, so far windows blend instead of shimmering.
-float filteredPulse(float x, float width, float from, float to)
-{
-    width = max(width, 1e-4);
-    return (pulseIntegral(x + 0.5 * width, from, to) - pulseIntegral(x - 0.5 * width, from, to)) / width;
-}
-
 void main()
 {
     int style = int(vLook.x + 0.5);
