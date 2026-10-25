@@ -1,10 +1,13 @@
-// Entry point for anu's cherry blossom island: sets up the scene in small steps.
+// Entry point for anu's cherry blossom island: loads the scene in small steps.
 
-import { initScene, startLoop, yieldToMain } from "./scene.js";
+import { loadIsland } from "./island.js";
+import { camera, initScene, renderer, scene, startLoop, warmUp, yieldToMain } from "./scene.js";
 
-/** Sets up the renderer and starts the frame loop. */
+/** Loads the island in small tasks, then starts the frame loop. */
 async function boot() {
   await initScene();
+  const island = await loadIsland({ scene, camera, renderer, yieldToMain });
+  await warmUp(island.children);
   startLoop(() => {});
   document.body.dataset.state = "ready";
 }
