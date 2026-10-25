@@ -17,6 +17,7 @@
     </div>
 
     <div class="object-label" aria-hidden="true"></div>
+    <div class="overlay"></div>
 
     <button type="button" class="mute-toggle-button toggle-buttons" inert aria-label="mute sound" aria-pressed="false">
       <svg class="sound-svg sound-on-svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -47,6 +48,46 @@
         <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
       </svg>
     </button>
+
+    <div class="work modal" role="dialog" aria-modal="true" aria-labelledby="work-title">
+      <div class="modal-wrapper">
+        <h2 class="modal-title" id="work-title">work</h2>
+        <div class="modal-content"></div>
+      </div>
+      <button type="button" class="modal-exit-button" aria-label="close">
+        <svg class="exit-button-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="about modal" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <div class="modal-wrapper">
+        <h2 class="modal-title" id="about-title">about</h2>
+        <div class="modal-content"></div>
+      </div>
+      <button type="button" class="modal-exit-button" aria-label="close">
+        <svg class="exit-button-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="contact modal" role="dialog" aria-modal="true" aria-labelledby="contact-title">
+      <div class="modal-wrapper">
+        <h2 class="modal-title" id="contact-title">say hey</h2>
+        <div class="modal-content"></div>
+      </div>
+      <button type="button" class="modal-exit-button" aria-label="close">
+        <svg class="exit-button-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </div>
+
 
     <div id="experience" inert>
       <canvas
