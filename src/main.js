@@ -1,6 +1,7 @@
 // Entry point for anu's cherry blossom island: boots the scene in small steps, then wires
 // the loading screen, the intro, object clicks, dialogs and toggles.
 
+import { createClouds } from "./clouds.js";
 import { revealIsland, waitForEnter } from "./loading.js";
 import { islandMaterials, loadIsland } from "./island.js";
 import { isModalOpen, setBackgroundInert, showModal } from "./modals.js";
@@ -32,6 +33,7 @@ import { playClick, setMuted, startMusic, stepTheme, theme } from "./toggles.js"
 const label = document.querySelector(".object-label");
 /** Created once the renderer exists (it needs the pixel ratio). */
 let petals;
+let clouds;
 let themedMaterials = [];
 
 let hasRevealed = false;
@@ -49,8 +51,11 @@ function runAction(action) {
 setupPicking(canvas, camera, { isBlocked, onAction: runAction });
 
 function onFrame(time, delta) {
-  // Reduced motion freezes the petals in place instead of hiding them.
-  if (!prefersReducedMotion) petals.material.uniforms.uTime.value = time;
+  // Reduced motion freezes petals and clouds in place instead of hiding them.
+  if (!prefersReducedMotion) {
+    petals.material.uniforms.uTime.value = time;
+    clouds.material.uniforms.uTime.value = time;
+  }
   if (stepTheme(delta)) {
     for (const material of themedMaterials) material.uniforms.uMixRatio.value = theme.mix;
     scene.background.lerpColors(SKY_COLORS.day, SKY_COLORS.night, theme.mix);
@@ -65,7 +70,9 @@ async function boot() {
   controls.addEventListener("change", requestRaycast);
   petals = createPetals(isMobile ? 120 : 300, renderer.getPixelRatio());
   scene.add(petals.points);
-  themedMaterials = [...islandMaterials, petals.material];
+  clouds = createClouds();
+  scene.add(clouds.mesh);
+  themedMaterials = [...islandMaterials, petals.material, clouds.material];
 
   const island = await loadIsland({ scene, camera, renderer, yieldToMain });
   for (const mesh of island.children) {
@@ -76,7 +83,7 @@ async function boot() {
       addProp(mesh);
     }
   }
-  await warmUp([...island.children, petals.points]);
+  await warmUp([...island.children, petals.points, clouds.mesh]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
