@@ -11,6 +11,7 @@ import { prefersReducedMotion } from "./motion.js";
 import { createPetals, fitPetalsToCanopy } from "./petals.js";
 import { createPrecipitation, setPrecipitation } from "./precipitation.js";
 import { createSkyline, setSkylineWeather } from "./skyline.js";
+import { createWalkers, obstacleFor, stepWalkers } from "./walkers.js";
 import {
   addHitbox,
   getHoveredObject,
@@ -48,6 +49,7 @@ let petals;
 let clouds;
 let precipitation;
 let skyline;
+let walkers;
 let themedMaterials = [];
 
 let hasRevealed = false;
@@ -72,6 +74,7 @@ function onFrame(time, delta) {
     precipitation.material.uniforms.uTime.value = time;
   }
   if (skyline) skyline.material.uniforms.uTime.value = time;
+  if (walkers && !prefersReducedMotion) stepWalkers(walkers, delta);
   if (stepTheme(delta)) {
     for (const material of themedMaterials) material.uniforms.uMixRatio.value = theme.mix;
     paintSky();
@@ -114,14 +117,21 @@ async function boot() {
   themedMaterials = [...islandMaterials, petals.material, clouds.material, precipitation.material];
 
   const island = await loadIsland({ scene, camera, renderer, yieldToMain });
+  // Walkers keep out of the trunk and every prop.
+  const obstacles = [{ x: 0, z: 0, r: 0.9 }];
   for (const mesh of island.children) {
     if (mesh.name.includes("Canopy")) fitPetalsToCanopy(petals, mesh);
     if (mesh.name.includes("Raycaster")) {
+      obstacles.push(obstacleFor(mesh));
       // Hitbox first: it is measured at the rest pose, before the intro hides the prop.
       addHitbox(mesh, scene);
       addProp(mesh);
     }
   }
+  walkers = createWalkers(obstacles);
+  scene.add(walkers.group);
+  themedMaterials.push(walkers.material);
+
   skyline = await skylineRequest;
   scene.add(skyline.mesh);
   themedMaterials.push(skyline.material);
@@ -130,7 +140,7 @@ async function boot() {
 
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
-  await warmUp([...island.children, petals.points, clouds.mesh, precipitation.points, skyline.mesh]);
+  await warmUp([...island.children, petals.points, clouds.mesh, precipitation.points, skyline.mesh, walkers.group]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
