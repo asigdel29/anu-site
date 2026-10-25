@@ -15,6 +15,7 @@ Every third-party asset on the site, with its license. Add a row for each new as
 
 - The 3D island, tree, props, figure and baked textures: made in Blender from `tools/blender/build_blockout.py`.
 - The music loop and click sound: synthesized by `tools/audio/make_sounds.py`.
+- The pixel-art New York skyline: drawn by `tools/skyline/make_skyline.py`.
 
 ## Inspiration
 
