@@ -1,16 +1,18 @@
 // The New York around the island: every building from src/city.js in one instanced draw call,
-// and the street-level ground with Central Park and the rivers. Both shaders share one set of
-// uniforms, so day, night and weather change them together.
+// Central Park's trees in another, and the street-level ground with the park and the rivers.
+// All three shaders share one set of uniforms, so day, night and weather change them together.
 
 import {
   BoxGeometry,
   CircleGeometry,
   Color,
   Group,
+  IcosahedronGeometry,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
   ShaderMaterial,
+  Vector4,
 } from "three";
 
 import {
@@ -22,19 +24,27 @@ import {
   MANHATTAN,
   PALETTE,
   PARK,
+  PARK_LAWNS,
+  PARK_WATER,
   STREET_SPACING,
   STREET_WIDTH,
+  TREE_PALETTE,
 } from "./city.js";
 import hazeShader from "./shaders/city/haze.glsl?raw";
 import buildingVertex from "./shaders/city/building.vert?raw";
 import buildingFragment from "./shaders/city/building.frag?raw";
 import groundVertex from "./shaders/city/ground.vert?raw";
 import groundFragment from "./shaders/city/ground.frag?raw";
+import treeVertex from "./shaders/city/tree.vert?raw";
+import treeFragment from "./shaders/city/tree.frag?raw";
 
 /** Turns the city so Midtown (south, +z in city space) stands behind the island in the opening view. */
 const CITY_HEADING = Math.atan2(-18, -20.5);
 /** The ground reaches past the haze, so its edge is never seen. */
 const GROUND_RADIUS = 700;
+
+/** Hex colours as sRGB vectors: the shaders work in sRGB, so they skip three's linear conversion. */
+const srgb = (colors) => colors.map((hex) => new Color(hex).convertLinearToSRGB());
 
 /** Writes numbers as a GLSL vector literal for a define. */
 const vec = (...values) => `vec${values.length}(${values.map((v) => v.toFixed(2)).join(", ")})`;
@@ -62,8 +72,7 @@ function createBuildings(uniforms, { footprint, shape, look }) {
   const material = new ShaderMaterial({
     uniforms: {
       ...uniforms,
-      // The shaders work in sRGB, so the palette skips three's linear conversion.
-      uPalette: { value: PALETTE.map((hex) => new Color(hex).convertLinearToSRGB()) },
+      uPalette: { value: srgb(PALETTE) },
     },
     vertexShader: buildingVertex,
     fragmentShader: hazeShader + buildingFragment,
@@ -74,9 +83,29 @@ function createBuildings(uniforms, { footprint, shape, look }) {
   return mesh;
 }
 
-function createGround(uniforms) {
+/** Builds the park trees: one flat-shaded icosahedron per tree, placed in the vertex shader. */
+function createTrees(uniforms, trees) {
+  const geometry = new InstancedBufferGeometry().copy(new IcosahedronGeometry(1, 0));
+  geometry.setAttribute("aTree", new InstancedBufferAttribute(trees, 4));
+  geometry.instanceCount = trees.length / 4;
   const material = new ShaderMaterial({
-    uniforms,
+    uniforms: { ...uniforms, uTreePalette: { value: srgb(TREE_PALETTE) } },
+    vertexShader: treeVertex,
+    fragmentShader: hazeShader + treeFragment,
+  });
+  const mesh = new Mesh(geometry, material);
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
+function createGround(uniforms) {
+  const ellipses = (list) => list.map(([x, z, rx, rz]) => new Vector4(x, z, rx, rz));
+  const material = new ShaderMaterial({
+    uniforms: {
+      ...uniforms,
+      uParkWater: { value: ellipses(PARK_WATER) },
+      uParkLawns: { value: ellipses(PARK_LAWNS) },
+    },
     defines: {
       PARK: vec(PARK.minX, PARK.maxX, PARK.minZ, PARK.maxZ),
       MANHATTAN: vec(MANHATTAN.north, MANHATTAN.south, MANHATTAN.halfWidth, MANHATTAN.taper),
@@ -94,7 +123,8 @@ function createGround(uniforms) {
 
 /**
  * Builds the city group off the main thread. The returned material is the buildings'; its
- * uniforms (uMixRatio, uTime, uSky, uHaze) are shared with the ground, so one update sets both.
+ * uniforms (uMixRatio, uTime, uSky, uHaze) are shared with the ground and the trees, so one
+ * update sets all three.
  */
 export async function createSkyline() {
   const uniforms = {
@@ -104,9 +134,10 @@ export async function createSkyline() {
     uHaze: { value: 0 },
     uGround: { value: GROUND_Y },
   };
-  const buildings = createBuildings(uniforms, await layoutInWorker());
+  const layout = await layoutInWorker();
+  const buildings = createBuildings(uniforms, layout);
   const group = new Group();
-  group.add(createGround(uniforms), buildings);
+  group.add(createGround(uniforms), createTrees(uniforms, layout.trees), buildings);
   group.rotation.y = CITY_HEADING;
   return { group, material: buildings.material };
 }
