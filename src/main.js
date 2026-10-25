@@ -1,7 +1,7 @@
 // Entry point for anu's cherry blossom island: boots the scene in small steps, then wires
 // the loading screen, the intro, object clicks, dialogs and toggles.
 
-import { createClouds } from "./clouds.js";
+import { createClouds, setCloudWeather } from "./clouds.js";
 import { revealIsland, waitForEnter } from "./loading.js";
 import { islandMaterials, loadIsland } from "./island.js";
 import { isModalOpen, setBackgroundInert, showModal } from "./modals.js";
@@ -28,7 +28,11 @@ import {
   warmUp,
   yieldToMain,
 } from "./scene.js";
-import { playClick, setMuted, startMusic, stepTheme, theme } from "./toggles.js";
+import { playClick, setMuted, setNight, startMusic, stepTheme, theme } from "./toggles.js";
+import { fetchWeather } from "./weather.js";
+
+/** How often the live weather refreshes. */
+const WEATHER_REFRESH_MS = 15 * 60 * 1000;
 
 const label = document.querySelector(".object-label");
 /** Created once the renderer exists (it needs the pixel ratio). */
@@ -64,8 +68,16 @@ function onFrame(time, delta) {
   updatePicking(camera, label, isBlocked());
 }
 
+/** Shows live New York weather on the island; night follows New York daylight on first load. */
+function applyWeather(weather, isFirst) {
+  setCloudWeather(clouds, weather);
+  document.body.dataset.weather = weather.kind;
+  if (isFirst) setNight(!weather.isDay);
+}
+
 /** Loads in small tasks, waits for "enter", then reveals the island and starts the intro. */
 async function boot() {
+  const weatherRequest = fetchWeather();
   await initScene();
   controls.addEventListener("change", requestRaycast);
   petals = createPetals(isMobile ? 120 : 300, renderer.getPixelRatio());
@@ -83,6 +95,8 @@ async function boot() {
       addProp(mesh);
     }
   }
+  applyWeather(await weatherRequest, true);
+  setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
   await warmUp([...island.children, petals.points, clouds.mesh]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
