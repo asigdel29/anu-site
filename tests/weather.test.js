@@ -13,6 +13,7 @@ test("weather codes map to the scene kinds", () => {
   assert.equal(describeWeather(73).kind, "snow");
   assert.equal(describeWeather(81).kind, "rain");
   assert.equal(describeWeather(96).kind, "storm");
+  assert.equal(describeWeather(63).phrase, "raining");
 });
 
 test("a rainy night becomes gloomy rain at night", () => {

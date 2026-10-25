@@ -34,6 +34,7 @@ import {
   yieldToMain,
 } from "./scene.js";
 import { playClick, setMuted, setNight, startMusic, stepTheme, theme } from "./toggles.js";
+import { noteWeather, showWeather, startClock } from "./status.js";
 import { fetchWeather, windVector } from "./weather.js";
 
 /** How often the live weather refreshes. */
@@ -99,11 +100,13 @@ function applyWeather(weather, isFirst) {
   sky.night.lerpColors(SKY_COLORS.night, GLOOM_SKY.night, weather.gloom);
   paintSky();
   document.body.dataset.weather = weather.kind;
+  showWeather(weather);
   if (isFirst) setNight(!weather.isDay);
 }
 
 /** Loads in small tasks, waits for "enter", then reveals the island and starts the intro. */
 async function boot() {
+  startClock();
   const weatherRequest = fetchWeather();
   const skylineRequest = createSkyline(new Color());
   await initScene();
@@ -152,6 +155,7 @@ async function boot() {
   hasRevealed = true;
   setBackgroundInert(false);
   startIntro(performance.now() / 1000);
+  noteWeather(await weatherRequest);
 }
 
 // Start on a fresh task so module evaluation and WebGL setup are not one long task.

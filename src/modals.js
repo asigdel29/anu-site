@@ -16,6 +16,7 @@ const overlay = document.querySelector(".overlay");
  */
 const backgroundParts = [
   ".pill-nav",
+  ".sky-status",
   "#experience",
 ].flatMap((selector) => [...document.querySelectorAll(selector)]);
 
