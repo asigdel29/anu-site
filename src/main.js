@@ -110,6 +110,7 @@ async function boot() {
   const weatherRequest = fetchWeather();
   const skylineRequest = createSkyline(new Color());
   await initScene();
+  await yieldToMain("petals");
   controls.addEventListener("change", requestRaycast);
   petals = createPetals(isMobile ? 120 : 300, renderer.getPixelRatio());
   scene.add(petals.points);
