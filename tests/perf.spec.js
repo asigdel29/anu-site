@@ -1,7 +1,7 @@
 // Performance budget: records a Chrome trace of load, enter, idle frames, dialog taps and the theme toggle on
 // a phone profile, and fails if any main-thread task does 20 ms or more of work.
-// Compositor commits are reported but not counted: in CI they wait on software WebGL (no GPU),
-// which says nothing about the site's own work.
+// Compositor commits and blocking waits on the GPU process are reported but not counted: in CI they
+// wait on software WebGL (no GPU), which says nothing about the site's own work.
 // PERF_CPU_THROTTLE=4 slows the CPU like a mid-range phone (CI runs at 1x).
 
 import { expect, test } from "@playwright/test";
@@ -27,7 +27,7 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
     })
   );
   await browser.startTracing(page, {
-    categories: ["devtools.timeline", "disabled-by-default-devtools.timeline", "blink.user_timing"],
+    categories: ["devtools.timeline", "disabled-by-default-devtools.timeline", "blink.user_timing", "gpu"],
   });
   await page.goto("/");
   await page.getByRole("button", { name: "enter without sound" }).click({ timeout: 30_000 });
@@ -52,16 +52,24 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
     (event) => event.pid === mainThread.pid && event.tid === mainThread.tid && event.ph === "X"
   );
   const commits = onMain.filter((event) => event.name === "Commit");
+  const inside = (event, outer) => event.ts >= outer.ts && event.ts + event.dur <= outer.ts + outer.dur;
+  // Creating the WebGL context and every synchronous GL call (a query, a finish) block here
+  // until the GPU process answers; with software GL that can take hundreds of milliseconds.
+  const gpuWaitNames = ["CommandBufferProxyImpl::Initialize", "CommandBufferProxyImpl::WaitForGetOffset"];
+  const gpuWaits = onMain.filter(
+    (event) => gpuWaitNames.includes(event.name) && !commits.some((commit) => inside(event, commit))
+  );
   const tasks = onMain
     .filter((event) => event.name === "RunTask")
     .map((task) => {
-      const commitTime = commits
-        .filter((commit) => commit.ts >= task.ts && commit.ts + commit.dur <= task.ts + task.dur)
-        .reduce((sum, commit) => sum + commit.dur, 0);
-      return { ts: task.ts, dur: task.dur, work: (task.dur - commitTime) / 1000, commit: commitTime / 1000 };
+      const total = (list) => list.filter((event) => inside(event, task)).reduce((sum, event) => sum + event.dur, 0);
+      const commitTime = total(commits);
+      const gpuTime = total(gpuWaits);
+      return { ts: task.ts, dur: task.dur, work: (task.dur - commitTime - gpuTime) / 1000, commit: commitTime / 1000, gpu: gpuTime / 1000 };
     });
   const durations = tasks.map((task) => task.work).sort((a, b) => b - a);
   const longestCommit = Math.max(0, ...tasks.map((task) => task.commit));
+  const longestGpuWait = Math.max(0, ...tasks.map((task) => task.gpu));
   const frames = events
     .filter((event) => event.pid === mainThread.pid && event.name === "FireAnimationFrame")
     .map((event) => event.dur / 1000)
@@ -70,21 +78,21 @@ test("no main-thread task reaches 20 ms", async ({ browser }) => {
   console.log(
     `cpu ${THROTTLE}x: ${tasks.length} tasks, longest work ${durations.slice(0, 3).map((d) => d.toFixed(1)).join(", ")} ms; ` +
       `${frames.length} frames, p95 ${frames[Math.floor(frames.length * 0.95)]?.toFixed(2)} ms; ` +
-      `longest commit wait ${longestCommit.toFixed(1)} ms`
+      `longest commit wait ${longestCommit.toFixed(1)} ms, longest GPU wait ${longestGpuWait.toFixed(1)} ms`
   );
   // Name what the three longest tasks spent their time on, so a CI failure explains itself.
   for (const task of [...tasks].sort((x, y) => y.work - x.work).slice(0, 3)) {
     const parts = onMain
       .filter((e) => e.ts >= task.ts && e.ts + e.dur <= task.ts + task.dur && e.dur > 1000)
-      .filter((e) => e.name !== "RunTask" && e.name !== "Commit")
+      .filter((e) => e.name !== "RunTask" && e.name !== "Commit" && !e.cat?.includes("gpu"))
       .sort((x, y) => y.dur - x.dur)
       .slice(0, 5)
       .map((e) => `${e.name}${e.args?.data?.functionName ? `(${e.args.data.functionName})` : ""} ${(e.dur / 1000).toFixed(1)}`);
     // The last boot mark before the task names the step it belongs to.
     const step = events
-      .filter((e) => e.cat?.includes("user_timing") && e.ts <= task.ts + task.dur)
+      .filter((e) => e.cat?.includes("user_timing") && e.ts <= task.ts)
       .reduce((latest, e) => (!latest || e.ts > latest.ts ? e : latest), null);
-    console.log(`  ${task.work.toFixed(1)} ms: ${parts.join(", ")}${step ? ` [after mark: ${step.name}]` : ""}`);
+    console.log(`  ${task.work.toFixed(1)} ms: ${parts.join(", ")}${step ? ` [step: ${step.name}]` : ""}`);
   }
 
   const slow = tasks
