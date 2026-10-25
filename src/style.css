@@ -84,9 +84,13 @@ a {
   outline-offset: 3px;
 }
 
+/* As tall as the viewport with the address bar hidden, so the bar moving never resizes it. */
 #experience {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100lvh;
 }
 
 #experience-canvas {
@@ -565,9 +569,19 @@ a {
   z-index: 2;
   width: var(--open-w);
   height: var(--open-h);
+  /* Only the island takes touches; the empty zone must not block the scene below. */
+  pointer-events: none;
+}
+
+/* With a mouse, the whole open-size zone is the hover target. */
+@media (hover: hover) {
+  .dock {
+    pointer-events: auto;
+  }
 }
 
 .island {
+  pointer-events: auto;
   position: absolute;
   overflow: hidden;
   width: var(--open-w);
@@ -994,6 +1008,11 @@ body:has(.loading-screen, .modal.is-open) {
   height: 100svh;
   scroll-snap-align: start;
   scroll-snap-stop: always;
+}
+
+/* The last stop fills the largest viewport, so its snap point is reachable however tall the window is. */
+.tour-stop:last-child {
+  height: 100lvh;
 }
 
 /* Marker bubbles over the props, like map pins: glossy badge, label, ground ring. */

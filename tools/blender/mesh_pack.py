@@ -37,6 +37,8 @@ def export_mesh_pack(objects, path, anchors=()):
         mesh.calc_loop_triangles()
         uv_data = mesh.uv_layers[BAKE_UV].data if BAKE_UV in mesh.uv_layers else None
         colour_data = [mesh.color_attributes[n].data for n in ("Day", "Night")] if "Day" in mesh.color_attributes else None
+        if uv_data is None and colour_data is None:
+            raise ValueError(f"{obj.name} has neither the {BAKE_UV} UV map nor Day and Night colours")
         lookup, positions, uvs, colours, indices = {}, [], [], [], []
         for triangle in mesh.loop_triangles:
             for loop_index in triangle.loops:
@@ -78,10 +80,11 @@ def export_mesh_pack(objects, path, anchors=()):
             "indices": append(array(index_type, indices).tobytes()),
         })
 
-    anchor_positions = {
-        anchor.name.removeprefix("Anchor_"): [anchor.location.x, anchor.location.z, -anchor.location.y]
-        for anchor in anchors
-    }
+    anchor_positions = {}
+    for anchor in anchors:
+        # World position, so an anchor still works if it is parented to its prop.
+        x, y, z = anchor.matrix_world.translation
+        anchor_positions[anchor.name.removeprefix("Anchor_")] = [x, z, -y]
     header = json.dumps({"nodes": nodes, "anchors": anchor_positions}).encode()
     header += b" " * ((-len(header)) % 4)
     path.parent.mkdir(parents=True, exist_ok=True)
