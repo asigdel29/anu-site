@@ -53,7 +53,7 @@ function onFrame(time, delta) {
 
 function paintSky() {
   scene.background.lerpColors(sky.day, sky.night, theme.mix);
-  // The skyline shader works in sRGB, so it gets the sky converted.
+  // The city shaders work in sRGB, so they get the sky converted.
   skyline?.material.uniforms.uSky.value.copy(scene.background).convertLinearToSRGB();
 }
 
@@ -74,7 +74,7 @@ function applyWeather(weather, isFirst) {
 async function boot() {
   startClock();
   const weatherRequest = fetchWeather();
-  const skylineRequest = createSkyline(new Color());
+  const skylineRequest = createSkyline();
   await initScene();
   await yieldToMain("clouds");
   clouds = createClouds();
@@ -88,14 +88,15 @@ async function boot() {
   await yieldToMain("load island");
 
   skyline = await skylineRequest;
-  scene.add(skyline.mesh);
+  scene.add(skyline.group);
   themedMaterials.push(skyline.material);
-  renderer.initTexture(skyline.texture);
+  // Compile the city shaders in the background; a first draw would compile them all in one task.
+  await renderer.compileAsync(skyline.group, camera, scene);
   await yieldToMain("skyline");
 
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
-  await warmUp([...island.children, clouds.mesh, precipitation.points, skyline.mesh]);
+  await warmUp([...island.children, clouds.mesh, precipitation.points, ...skyline.group.children]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
