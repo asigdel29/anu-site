@@ -22,7 +22,8 @@ export const canvas = document.querySelector("#experience-canvas");
 export const scene = new Scene();
 scene.background = SKY_COLORS.day.clone();
 
-export const camera = new PerspectiveCamera(35, 1, 0.1, 200);
+/** Far plane: the city's ground reaches 700 m out, and the haze hides its edge. */
+export const camera = new PerspectiveCamera(35, 1, 0.5, 800);
 /** Set by initScene(). */
 export let renderer;
 /** Set by initScene(). */
