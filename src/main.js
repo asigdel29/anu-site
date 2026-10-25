@@ -113,8 +113,10 @@ async function boot() {
   controls.addEventListener("change", requestRaycast);
   petals = createPetals(isMobile ? 120 : 300, renderer.getPixelRatio());
   scene.add(petals.points);
+  await yieldToMain("clouds");
   clouds = createClouds();
   scene.add(clouds.mesh);
+  await yieldToMain("rain and snow");
   precipitation = createPrecipitation(isMobile ? 600 : 1500, renderer.getPixelRatio());
   scene.add(precipitation.points);
   themedMaterials = [...islandMaterials, petals.material, clouds.material, precipitation.material];
@@ -131,15 +133,17 @@ async function boot() {
       addProp(mesh);
     }
   }
+  await yieldToMain("load island");
   walkers = createWalkers(obstacles);
   scene.add(walkers.group);
   themedMaterials.push(walkers.material);
+  await yieldToMain("walkers");
 
   skyline = await skylineRequest;
   scene.add(skyline.mesh);
   themedMaterials.push(skyline.material);
   renderer.initTexture(skyline.texture);
-  await yieldToMain();
+  await yieldToMain("skyline");
 
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
@@ -159,4 +163,4 @@ async function boot() {
 }
 
 // Start on a fresh task so module evaluation and WebGL setup are not one long task.
-yieldToMain().then(boot);
+yieldToMain("boot").then(boot);

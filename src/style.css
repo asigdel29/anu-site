@@ -754,3 +754,8 @@ a {
     bottom: 168px;
   }
 }
+
+/* Hidden under the loading screen anyway; skipping them keeps the first layout short. */
+body:not([data-state="ready"]) :is(.pill-nav, .sky-status, .site-title, .hero-card) {
+  display: none;
+}

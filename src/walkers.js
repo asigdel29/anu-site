@@ -32,7 +32,9 @@ function part(geometry, hex, [x, y, z], { glow = 0, scale = [1, 1, 1], rotateX =
   const count = geometry.attributes.position.count;
   // The shader writes colours straight out (sRGB), so keep the hex values as they are.
   const rgb = new Color(hex).convertLinearToSRGB().toArray();
-  geometry.setAttribute("color", new BufferAttribute(new Float32Array(count * 3).map((_, i) => rgb[i % 3]), 3));
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) colors.set(rgb, i * 3);
+  geometry.setAttribute("color", new BufferAttribute(colors, 3));
   geometry.setAttribute("aGlow", new BufferAttribute(new Float32Array(count).fill(glow), 1));
   return geometry.toNonIndexed();
 }

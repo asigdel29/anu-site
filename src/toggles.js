@@ -3,14 +3,22 @@
 
 import { damp } from "./motion.js";
 
-const music = new Audio("/audio/music/island.mp3");
-music.loop = true;
-music.volume = 0.6;
-// The 385 KB loop downloads only when someone turns sound on.
-music.preload = "none";
+/** Audio elements, created on first use so module start stays short. */
+let music;
+let click;
 
-const click = new Audio("/audio/sfx/click.mp3");
-click.volume = 0.5;
+function ensureAudio() {
+  if (music) return;
+  music = new Audio("/audio/music/island.mp3");
+  music.loop = true;
+  music.volume = 0.6;
+  // The 385 KB loop downloads only when someone turns sound on.
+  music.preload = "none";
+  click = new Audio("/audio/sfx/click.mp3");
+  click.volume = 0.5;
+  music.muted = isMuted;
+  click.muted = isMuted;
+}
 
 const muteButton = document.querySelector(".mute-toggle-button");
 const themeButton = document.querySelector(".theme-toggle-button");
@@ -23,20 +31,24 @@ export const theme = { mix: 0, target: 0 };
 /** Plays the click sound from the start, unless muted. */
 export function playClick() {
   if (isMuted) return;
+  ensureAudio();
   click.currentTime = 0;
   click.play().catch(() => {});
 }
 
 /** Starts the music loop if sound is on. */
 export function startMusic() {
+  ensureAudio();
   if (!isMuted && music.paused) music.play().catch(() => {});
 }
 
 /** Mutes or unmutes everything and syncs the button state. */
 export function setMuted(muted) {
   isMuted = muted;
-  music.muted = muted;
-  click.muted = muted;
+  if (music) {
+    music.muted = muted;
+    click.muted = muted;
+  }
   muteButton.setAttribute("aria-pressed", String(muted));
 }
 
