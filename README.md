@@ -5,10 +5,10 @@ The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 
 ## What is on the page
 
 - **The island:** a grass slab on pink brick pillars, about 400 m above Central Park.
-- **The city:** Manhattan at about 1:10, with its street grid, Central Park, the Hudson, the East River and the boroughs beyond.
+- **The city:** Manhattan at about 1:10 in toy-model pastels, with its street grid, Central Park, the Hudson, the East River and the boroughs beyond.
 - **Landmarks:** about 25 towers that people know New York by, from the Plaza to One World Trade Center.
-- **The park:** about 1,400 trees in green, cherry blossom pink and white, with the Reservoir, the Lake, the Pond and the lawns.
-- **Day and night:** at night, windows light up and change slowly, crowns are floodlit, streets glow and aviation lights flash.
+- **The park:** about 1,400 trees in green, cherry blossom pink and yellow, with the Reservoir, the Lake, the Pond and the lawns.
+- **Day and night:** the day sky is a bright cyan and the night a deep indigo. At night, windows light up in candy colours and change slowly, crowns are floodlit, streets glow and aviation lights flash.
 - **Live weather:** clouds, wind, rain, snow, fog and thunder follow New York now (data from Open-Meteo). The first visit starts in night mode after dark in New York.
 - **Content:** the nav at the top opens the work, about and contact dialogs.
 

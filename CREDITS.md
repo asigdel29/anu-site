@@ -5,9 +5,8 @@ Every third-party asset on the site, with its license. Add a row for each new as
 | Asset | Source | License | Used for |
 |---|---|---|---|
 | Room folio code | [Andrew Woan](https://github.com/andrewwoan/sooahs-room-folio) | MIT | Starting point for the scene, loading and modal code |
-| Space Grotesk | [Florian Karsten](https://github.com/floriankarsten/space-grotesk) | SIL OFL 1.1 | Headings and buttons |
+| Fredoka | [The Fredoka Project Authors](https://github.com/hafontia/Fredoka-One) | SIL OFL 1.1 | Headings, buttons and display text |
 | Inter | [The Inter Project Authors](https://github.com/rsms/inter) | SIL OFL 1.1 | Body text |
-| Instrument Serif | [The Instrument Serif Project Authors](https://github.com/Instrument/instrument-serif) | SIL OFL 1.1 | Titles and display text |
 | Brand icons (GitHub, LinkedIn, X, Substack) | [Simple Icons](https://simpleicons.org) | CC0 1.0 | Contact links |
 | UI icons (mail, sun, moon, sound, close) | [Lucide](https://lucide.dev) | ISC | Toggles and buttons |
 | Live weather | [Open-Meteo](https://open-meteo.com) | CC BY 4.0 (data), free non-commercial API | Clouds, wind, rain, snow, fog and night follow New York |

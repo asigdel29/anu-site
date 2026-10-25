@@ -1,4 +1,4 @@
-// Thin streaks for rain, soft flakes for snow.
+// Thin streaks for rain (pale cyan by day, lilac by night), soft white flakes for snow.
 
 uniform float uSnow;
 uniform float uMixRatio;
@@ -13,7 +13,7 @@ void main()
     float shape = mix(streak, flake, uSnow);
     if (shape < 0.02) discard;
 
-    vec3 rain = mix(vec3(0.75, 0.82, 0.92), vec3(0.55, 0.6, 0.78), uMixRatio);
+    vec3 rain = mix(vec3(0.82, 0.94, 1.0), vec3(0.64, 0.6, 0.92), uMixRatio);
     vec3 color = mix(rain, vec3(1.0), uSnow);
     gl_FragColor = vec4(color, shape * vAlpha * mix(0.55, 0.9, uSnow));
 }
