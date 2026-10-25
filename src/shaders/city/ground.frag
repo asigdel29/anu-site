@@ -45,7 +45,7 @@ void main()
     day = mix(day, dayWater, reservoir);
 
     vec3 nightWater = mix(vec3(0.03, 0.05, 0.1), uSky, 0.25) + ripple * 0.5;
-    vec3 nightLand = vec3(0.05, 0.05, 0.08) + vec3(1.0, 0.7, 0.36) * 0.55 * road;
+    vec3 nightLand = vec3(0.05, 0.05, 0.08) + vec3(1.0, 0.7, 0.36) * 0.4 * road;
     vec3 night = mix(nightWater, mix(nightLand, vec3(0.04, 0.08, 0.06), park), land);
     night = mix(night, nightWater, reservoir);
 

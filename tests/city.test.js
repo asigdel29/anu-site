@@ -7,6 +7,7 @@ import { test } from "node:test";
 import {
   BOROUGH_EDGE,
   CAMERA_CLEARANCE,
+  LANDMARKS,
   LOW_RISE_LIMIT,
   inPark,
   layoutCity,
@@ -40,9 +41,20 @@ test("buildings near the island stay low, so the camera never meets a wall", () 
   }
 });
 
+test("every landmark stands, and no ordinary lot overlaps one", () => {
+  const lots = buildings.filter((b) => !LANDMARKS.includes(b));
+  assert.equal(buildings.length - lots.length, LANDMARKS.length);
+  for (const part of LANDMARKS) {
+    for (const lot of lots) {
+      const apart = Math.abs(lot.x - part.x) >= (lot.width + part.width) / 2 || Math.abs(lot.z - part.z) >= (lot.depth + part.depth) / 2;
+      assert.ok(apart, `lot at ${lot.x}, ${lot.z} overlaps a landmark`);
+    }
+  }
+});
+
 test("packing keeps one entry per building", () => {
   const { footprint, shape, look } = packCity(buildings);
   assert.equal(footprint.length, buildings.length * 4);
   assert.equal(shape.length, buildings.length * 4);
-  assert.equal(look.length, buildings.length * 2);
+  assert.equal(look.length, buildings.length * 4);
 });
