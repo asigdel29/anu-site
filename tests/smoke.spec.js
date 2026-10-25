@@ -1,6 +1,6 @@
 // End-to-end smoke test: the island loads, the nav folds and opens on hover, every section
-// opens from the nav, Escape closes it, and the page has no script errors, console errors or
-// failed requests.
+// opens from the nav, Escape closes it, scrolling reaches the stick figure whose marker opens
+// "about", and the page has no script errors, console errors or failed requests.
 
 import { expect, test } from "@playwright/test";
 
@@ -73,6 +73,16 @@ test("island loads and every section opens from the nav", async ({ page }) => {
   ).toHaveAttribute("href", "mailto:sigdelanubhav@gmail.com");
   await page.keyboard.press("Escape");
   await expect(contact).toBeHidden();
+
+  // Scroll tour: one screen of scroll reaches the stick figure, and its marker opens "about".
+  await page.evaluate(() => window.scrollTo({ top: window.innerHeight, behavior: "instant" }));
+  await expect(page.locator(".tour-rail-label")).toHaveText("that's me");
+  const aboutMarker = page.getByRole("button", { name: "about me" });
+  await expect(aboutMarker).toBeVisible();
+  await aboutMarker.click();
+  await expect(about).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(about).toBeHidden();
 
   expect(problems).toEqual([]);
 });
