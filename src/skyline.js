@@ -1,16 +1,22 @@
 // The New York around the island: every building from src/city.js in one instanced draw call,
-// Central Park's trees in another, and the street-level ground with the park and the rivers.
-// All three shaders share one set of uniforms, so day, night and weather change them together.
+// Central Park's trees in another, red aviation lights on the tall tops, and the street-level
+// ground with the park and the rivers. All the city shaders share one set of uniforms, so day,
+// night and weather change them together.
 
 import {
+  AdditiveBlending,
   BoxGeometry,
+  BufferGeometry,
   CircleGeometry,
   Color,
   Group,
   IcosahedronGeometry,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
+  InterleavedBuffer,
+  InterleavedBufferAttribute,
   Mesh,
+  Points,
   ShaderMaterial,
   Vector4,
 } from "three";
@@ -37,6 +43,8 @@ import groundVertex from "./shaders/city/ground.vert?raw";
 import groundFragment from "./shaders/city/ground.frag?raw";
 import treeVertex from "./shaders/city/tree.vert?raw";
 import treeFragment from "./shaders/city/tree.frag?raw";
+import lightVertex from "./shaders/city/light.vert?raw";
+import lightFragment from "./shaders/city/light.frag?raw";
 
 /** Turns the city so Midtown (south, +z in city space) stands behind the island in the opening view. */
 const CITY_HEADING = Math.atan2(-18, -20.5);
@@ -98,6 +106,26 @@ function createTrees(uniforms, trees) {
   return mesh;
 }
 
+/** Builds the aviation lights: points read straight from the packed x, top, z, phase array. */
+function createLights(uniforms, lights) {
+  const packed = new InterleavedBuffer(lights, 4);
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new InterleavedBufferAttribute(packed, 3, 0));
+  geometry.setAttribute("aPhase", new InterleavedBufferAttribute(packed, 1, 3));
+  const material = new ShaderMaterial({
+    uniforms: { ...uniforms, uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) } },
+    vertexShader: lightVertex,
+    fragmentShader: hazeShader + lightFragment,
+    transparent: true,
+    depthWrite: false,
+    blending: AdditiveBlending,
+  });
+  const points = new Points(geometry, material);
+  // Heights are above the street; the shader adds the street level, so the bounds would be wrong.
+  points.frustumCulled = false;
+  return points;
+}
+
 function createGround(uniforms) {
   const ellipses = (list) => list.map(([x, z, rx, rz]) => new Vector4(x, z, rx, rz));
   const material = new ShaderMaterial({
@@ -123,8 +151,8 @@ function createGround(uniforms) {
 
 /**
  * Builds the city group off the main thread. The returned material is the buildings'; its
- * uniforms (uMixRatio, uTime, uSky, uHaze) are shared with the ground and the trees, so one
- * update sets all three.
+ * uniforms (uMixRatio, uTime, uSky, uHaze) are shared with the ground, the trees and the lights,
+ * so one update sets them all.
  */
 export async function createSkyline() {
   const uniforms = {
@@ -137,7 +165,7 @@ export async function createSkyline() {
   const layout = await layoutInWorker();
   const buildings = createBuildings(uniforms, layout);
   const group = new Group();
-  group.add(createGround(uniforms), createTrees(uniforms, layout.trees), buildings);
+  group.add(createGround(uniforms), createTrees(uniforms, layout.trees), buildings, createLights(uniforms, layout.lights));
   group.rotation.y = CITY_HEADING;
   return { group, material: buildings.material };
 }

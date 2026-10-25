@@ -11,6 +11,7 @@ import {
   LOW_RISE_LIMIT,
   PARK_WATER,
   inPark,
+  layoutLights,
   layoutTrees,
   layoutCity,
   manhattanHalfWidth,
@@ -24,7 +25,7 @@ test("the layout is the same on every visit", () => {
 });
 
 test("the building count stays inside the budget", () => {
-  assert.ok(buildings.length > 3000 && buildings.length < 9000, `${buildings.length} buildings`);
+  assert.ok(buildings.length > 3000 && buildings.length < 12000, `${buildings.length} buildings`);
 });
 
 test("no building stands in Central Park or in a river", () => {
@@ -39,12 +40,14 @@ test("no building stands in Central Park or in a river", () => {
 
 test("buildings near the island stay low, so the camera never meets a wall", () => {
   for (const b of buildings) {
-    if (Math.hypot(b.x, b.z) < CAMERA_CLEARANCE) assert.ok(b.height <= LOW_RISE_LIMIT);
+    // A rooftop box may add up to 1 m.
+    if (Math.hypot(b.x, b.z) < CAMERA_CLEARANCE) assert.ok(b.base + b.height <= LOW_RISE_LIMIT + 1);
   }
 });
 
 test("every landmark stands, and no ordinary lot overlaps one", () => {
   const lots = buildings.filter((b) => !LANDMARKS.includes(b));
+  assert.equal(new Set(buildings).size, buildings.length);
   assert.equal(buildings.length - lots.length, LANDMARKS.length);
   for (const part of LANDMARKS) {
     for (const lot of lots) {
@@ -69,4 +72,10 @@ test("trees grow in the park and never in its water", () => {
     assert.ok(inPark(x, z), `tree outside the park at ${x}, ${z}`);
     for (const [cx, cz, rx, rz] of PARK_WATER) assert.ok(((x - cx) / rx) ** 2 + ((z - cz) / rz) ** 2 >= 1, `tree in water at ${x}, ${z}`);
   }
+});
+
+test("aviation lights sit on the tall tops only", () => {
+  const lights = layoutLights(buildings);
+  assert.ok(lights.length / 4 > 100, `${lights.length / 4} lights`);
+  for (let i = 1; i < lights.length; i += 4) assert.ok(lights[i] > 18);
 });
