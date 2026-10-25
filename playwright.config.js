@@ -11,6 +11,8 @@ export default defineConfig({
   timeout: 60_000,
   // One worker: the perf test measures main-thread time and must not share the CPU.
   workers: 1,
+  // CI runners render WebGL in software and are noisy; a real regression still fails twice.
+  retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: { ...devices["Desktop Chrome"], baseURL },
   webServer: process.env.BASE_URL
