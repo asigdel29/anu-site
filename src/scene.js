@@ -36,19 +36,22 @@ function fitToWindow() {
 }
 
 /**
- * Creates the WebGL context, the renderer and the controls in separate tasks: each step
- * makes blocking calls to the GPU process, and together they would be one long task.
+ * Creates the WebGL context, the renderer, the canvas size and the controls in separate tasks:
+ * each step makes blocking calls to the GPU process or compiles new code, and on a slow GPU
+ * any two of them together pass 20 ms.
  */
 export async function initScene() {
   const context = canvas.getContext("webgl2", { antialias: true });
   await yieldToMain("renderer");
   renderer = new WebGLRenderer({ canvas, context });
+  await yieldToMain("canvas size");
   fitToWindow();
   window.addEventListener("resize", fitToWindow);
   await yieldToMain("controls");
+  controls = new OrbitControls(camera, canvas);
+  await yieldToMain("camera");
 
   // ponytail: camera numbers are tuned by eye for the blockout; retune after the final model.
-  controls = new OrbitControls(camera, canvas);
   controls.minDistance = 8;
   controls.maxDistance = 35;
   controls.minPolarAngle = 0.15 * Math.PI;
