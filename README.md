@@ -6,10 +6,10 @@ The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 
 
 - **The island:** a grass slab on sand-clay pillars, about 400 m above Central Park. A cherry blossom tree stands in the middle.
 - **The props:** a stick figure of Anu, a laptop on a crate, a stack of books and a mailbox.
-- **The city:** Manhattan at about 1:10 in toy-model pastels, with its street grid, Central Park, the Hudson, the East River and the boroughs beyond.
+- **The city:** Manhattan at about 1:10 in a sunny stylized look, with warm brick, cream stone and teal glass. It has its street grid, Central Park, the Hudson, the East River and the boroughs beyond.
 - **Landmarks:** about 25 towers that people know New York by, from the Plaza to One World Trade Center.
 - **The park:** about 1,400 trees in green, cherry blossom pink and yellow, with the Reservoir, the Lake, the Pond and the lawns.
-- **Day and night:** the day sky is a bright cyan and the night a deep indigo. At night, windows light up in candy colours and change slowly, crowns are floodlit, streets glow and aviation lights flash.
+- **Day and night:** the day sky is a bright cyan and the night a deep indigo. At night, windows glow warm yellow and orange and change slowly, crowns are floodlit, streets glow and aviation lights flash.
 - **Live weather:** clouds, wind, rain, snow, fog and thunder follow New York now (data from Open-Meteo). The first visit starts in night mode after dark in New York.
 - **The scroll tour:** each scroll moves the camera one stop: in from the city to the stick figure, around the island to each prop, then out to a high view of New York. At each prop, a marker bubble opens its section. A rail on the right shows the stops.
 - **Content:** the nav at the top opens the work, about and contact dialogs. 5 seconds after the island appears, the nav and the hero card fold into small glass capsules. Hover, focus or a tap opens them again.
@@ -73,6 +73,10 @@ To add a stop:
 - Avenues are 26 m apart and streets are 8 m apart. `blockSouthOf(street)` gives the z of the block south of a numbered street.
 - Towers rise in Midtown, the Financial District and the waterfronts. The other blocks are pre-war mid-rise.
 - Buildings near the island stay low, so the camera never meets a wall.
+- The shaders light the city like a stylized game. A warm sun lights one side of each building, and a cool blue-purple light fills the shade.
+- Each building gets brighter toward its top. Its corners have a bright rim, each roof line has a cornice, and each roof has a pale parapet.
+- Windows reflect the sky by day and glow warm by night. Copper and gold roofs have no windows.
+- The streets have asphalt roadways, sidewalks, lane dashes and crosswalks. The water has a foam line along each shore and glints in the sun.
 
 To add a landmark:
 

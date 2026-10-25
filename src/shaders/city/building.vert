@@ -1,6 +1,6 @@
 // Places one unit box per building from its instance data. Taper shrinks the top for
 // pointed crowns; slant drops the roof's south edge (Citigroup, Hudson Yards). Passes facade
-// coordinates in metres so the fragment shader can draw windows.
+// and roof coordinates in metres so the fragment shader can draw windows, rims and parapets.
 
 attribute vec4 aFootprint; // x, z centre, width (x), depth (z)
 attribute vec4 aShape;     // base above the street, height, taper, seed
@@ -9,6 +9,7 @@ attribute vec4 aLook;      // facade style, palette index, roof slant in metres,
 uniform float uGround;
 
 varying vec3 vFacade;  // metres across the face, metres up, face width in metres
+varying vec4 vRoof;    // metres from the roof's west and north edges, roof width and depth
 varying vec3 vNormal;
 varying vec3 vWorld;
 varying vec4 vShape;
@@ -22,11 +23,13 @@ void main()
     local.y -= aLook.z * step(0.999, position.y) * (position.z + 0.5);
     vec4 world = modelMatrix * vec4(aFootprint.x + local.x, uGround + aShape.x + local.y, aFootprint.y + local.z, 1.0);
 
-    // The face width lets the fragment shader find the wall's corners for the rounded edge light.
+    // The face width lets the fragment shader find the wall's corners for the rim light.
     bool eastWest = abs(normal.x) > 0.5;
     float faceWidth = eastWest ? aFootprint.w : aFootprint.z;
     float across = ((eastWest ? position.z : position.x) + 0.5) * faceWidth;
+    vec2 roofSize = aFootprint.zw * (1.0 - aShape.z);
     vFacade = vec3(across, aShape.x + local.y, faceWidth);
+    vRoof = vec4((position.xz + 0.5) * roofSize, roofSize);
     vNormal = normalize(mat3(modelMatrix) * normal);
     vWorld = world.xyz;
     vShape = aShape;
