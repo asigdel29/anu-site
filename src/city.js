@@ -38,12 +38,14 @@ export const LOW_RISE_LIMIT = 12;
 export const STYLE = { punched: 0, glass: 1, bands: 2, piers: 3, grid: 4 };
 
 /**
- * Day colours (sRGB) the shader picks by index: brick, brownstone, limestone, cream, concrete,
- * three glasses, then the landmark trims: copper green, steel, gold and white.
+ * Day colours (sRGB) the shader picks by index, in toy-model pastels and candy colours. Each
+ * slot keeps its role: brick (pink), brownstone (peach), limestone (sand), cream, concrete
+ * (lilac), three glasses (sky blue, violet, mint), then the landmark trims: copper (green),
+ * steel (ice), gold (yellow) and white.
  */
 export const PALETTE = [
-  "#B9785F", "#8E6A5A", "#D8CCB4", "#E6DDCB", "#B9BBBA", "#7F9DBA", "#56677E", "#7FA9A8",
-  "#6FA58F", "#D9DEE6", "#D9B45A", "#EFEDE8",
+  "#F59BBB", "#FFA86B", "#F6D59C", "#FFEFC9", "#C6B0F3", "#63BFF4", "#A182EC", "#6DD3AA",
+  "#4FB85A", "#DDEFFC", "#FFD34D", "#FFFFFF",
 ];
 
 /** How a part shows: windows, a crown floodlit at night, or bare (no windows: spires, masts, rooftop boxes). */
@@ -349,8 +351,8 @@ function inEllipses(x, z, ellipses, margin = 0) {
   return ellipses.some(([cx, cz, rx, rz]) => ((x - cx) / (rx + margin)) ** 2 + ((z - cz) / (rz + margin)) ** 2 < 1);
 }
 
-/** Tree colours by index (sRGB): four greens, two cherry blossom pinks, and white pear blossom. */
-export const TREE_PALETTE = ["#5E9A4E", "#6FA85A", "#4F8A48", "#83B565", "#F08AA0", "#F6A9B8", "#F4EFE6"];
+/** Tree colours by index (sRGB), bright like toy trees: four greens, two cherry blossom pinks, and yellow. */
+export const TREE_PALETTE = ["#3FAF5A", "#5DBB63", "#7BCB6B", "#8FD86A", "#F48FB1", "#FF8DB9", "#FFD54A"];
 
 /**
  * Plants Central Park on a jittered 3.2 m grid, leaving the water and the lawns open.

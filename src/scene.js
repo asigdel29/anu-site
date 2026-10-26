@@ -9,10 +9,13 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
  */
 export const isMobile = window.matchMedia("(max-width: 767px)").matches;
 
-/** Sky colour per theme; the theme toggle blends between them. */
+/**
+ * Sky colour per theme; the theme toggle blends between them. Day is a bright toy cyan and
+ * night a deep candy indigo, so the city reads as a toy model, not a photo.
+ */
 export const SKY_COLORS = {
-  day: new Color("#A9D6F2"),
-  night: new Color("#1E1B3A"),
+  day: new Color("#8DDCF8"),
+  night: new Color("#2A1F5E"),
 };
 
 /** Phones render at most 1.5x pixels: still sharp, and far less fill work than 3x. */
