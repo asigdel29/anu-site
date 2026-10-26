@@ -1,6 +1,6 @@
 // The New York around the island: every building from src/city.js in one instanced draw call,
-// Central Park's trees in another, rooftop water towers in a third, red aviation lights on the
-// tall tops, and the street-level ground with the park and the rivers. All the city shaders share one set of uniforms, so day,
+// Central Park's trees in another, rooftop water towers in a third, the traffic in a fourth, red
+// aviation lights on the tall tops, and the street-level ground with the park and the rivers. All the city shaders share one set of uniforms, so day,
 // night and weather change them together.
 
 import {
@@ -17,6 +17,7 @@ import {
   IcosahedronGeometry,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
+  InstancedInterleavedBuffer,
   InterleavedBuffer,
   InterleavedBufferAttribute,
   Mesh,
@@ -32,6 +33,8 @@ import {
   AVENUE_SPACING,
   AVENUE_WIDTH,
   BOROUGH_EDGE,
+  CAR,
+  CAR_PALETTE,
   GROUND_Y,
   MANHATTAN,
   PALETTE,
@@ -55,6 +58,8 @@ import treeVertex from "./shaders/city/tree.vert?raw";
 import treeFragment from "./shaders/city/tree.frag?raw";
 import lightVertex from "./shaders/city/light.vert?raw";
 import lightFragment from "./shaders/city/light.frag?raw";
+import trafficVertex from "./shaders/city/traffic.vert?raw";
+import trafficFragment from "./shaders/city/traffic.frag?raw";
 import waterTowerVertex from "./shaders/city/water-tower.vert?raw";
 import waterTowerFragment from "./shaders/city/water-tower.frag?raw";
 
@@ -83,11 +88,11 @@ function layoutInWorker() {
 }
 
 /**
- * A unit box with its base at y = 0 and no bottom face, which no camera sees: ten triangles per
- * building instead of twelve, across thousands of buildings.
+ * A box with its base at y = 0 and no bottom face, which no camera sees: ten triangles instead
+ * of twelve, across thousands of buildings and cars.
  */
-function buildingGeometry() {
-  const box = new BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+function openBox(width, height, depth) {
+  const box = new BoxGeometry(width, height, depth).translate(0, height / 2, 0);
   const bottom = box.groups[3];
   const corners = Array.from(box.getIndex().array);
   corners.splice(bottom.start, bottom.count);
@@ -98,7 +103,7 @@ function buildingGeometry() {
 
 /** Builds the instanced buildings: a unit box per record, placed and sized in the vertex shader. */
 function createBuildings(uniforms, { footprint, shape, look }) {
-  const geometry = new InstancedBufferGeometry().copy(buildingGeometry());
+  const geometry = new InstancedBufferGeometry().copy(openBox(1, 1, 1));
   geometry.setAttribute("aFootprint", new InstancedBufferAttribute(footprint, 4));
   geometry.setAttribute("aShape", new InstancedBufferAttribute(shape, 4));
   geometry.setAttribute("aLook", new InstancedBufferAttribute(look, 4));
@@ -234,6 +239,30 @@ function createWaterTowers(uniforms, towers) {
   return mesh;
 }
 
+/** Car height in metres, body and cabin together. */
+const CAR_HEIGHT = 0.17;
+
+/**
+ * Builds the traffic: one box per car, driven along its lane in the vertex shader from uTime, so
+ * moving thousands of metres of traffic costs the main thread nothing. One draw call.
+ */
+function createTraffic(uniforms, traffic) {
+  const geometry = new InstancedBufferGeometry().copy(openBox(CAR.length, CAR_HEIGHT, CAR.width));
+  const packed = new InstancedInterleavedBuffer(traffic, 8);
+  geometry.setAttribute("aLane", new InterleavedBufferAttribute(packed, 4, 0));
+  geometry.setAttribute("aCar", new InterleavedBufferAttribute(packed, 4, 4));
+  geometry.instanceCount = traffic.length / 8;
+  const material = new ShaderMaterial({
+    uniforms: { ...uniforms, uCarPalette: { value: srgb(CAR_PALETTE) } },
+    defines: { CAR_SIZE: vec(CAR.length, CAR_HEIGHT, CAR.width) },
+    vertexShader: trafficVertex,
+    fragmentShader: commonShader + trafficFragment,
+  });
+  const mesh = new Mesh(geometry, material);
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
 /** Builds the aviation lights: points read straight from the packed x, top, z, phase array. */
 function createLights(uniforms, lights) {
   const packed = new InterleavedBuffer(lights, 4);
@@ -290,7 +319,7 @@ export async function createSkyline() {
     uSky: { value: new Color() },
     uHaze: { value: 0 },
     uGround: { value: GROUND_Y },
-    // Trees sway only when the visitor allows motion.
+    // Trees sway and cars drive only when the visitor allows motion.
     uMotion: { value: prefersReducedMotion ? 0 : 1 },
   };
   const layout = await layoutInWorker();
@@ -301,6 +330,7 @@ export async function createSkyline() {
     createTrees(uniforms, layout.trees),
     buildings,
     createWaterTowers(uniforms, layout.towers),
+    createTraffic(uniforms, layout.traffic),
     createLights(uniforms, layout.lights)
   );
   group.rotation.y = CITY_HEADING;

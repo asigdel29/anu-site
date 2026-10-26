@@ -16,12 +16,21 @@ import {
   PARK_WATER,
   STREET_SPACING,
   STYLE,
+  CAR,
+  CAR_PALETTE,
+  HEADING,
+  TRAFFIC_RADIUS,
+  AVENUE_ORIGIN,
+  AVENUE_SPACING,
+  AVENUE_WIDTH,
+  STREET_WIDTH,
   TOWER_RADIUS,
   TREE_PALETTE,
   inPark,
   layoutLights,
   layoutTrees,
   layoutCity,
+  layoutTraffic,
   layoutWaterTowers,
   buildCityArrays,
   manhattanHalfWidth,
@@ -67,13 +76,14 @@ test("every landmark stands, and no ordinary lot overlaps one", () => {
 });
 
 test("the arrays the meshes read hold one entry per building, tree and light", () => {
-  const { footprint, shape, look, trees, lights, towers } = buildCityArrays();
+  const { footprint, shape, look, trees, lights, towers, traffic } = buildCityArrays();
   assert.equal(footprint.length, buildings.length * 4);
   assert.equal(shape.length, buildings.length * 4);
   assert.equal(look.length, buildings.length * 4);
   assert.equal(trees.length, layoutTrees().length);
   assert.equal(lights.length, layoutLights(buildings).length);
   assert.equal(towers.length, layoutWaterTowers(buildings).length);
+  assert.deepEqual(traffic, layoutTraffic());
 });
 
 test("trees grow in the park and never in its water", () => {
@@ -137,5 +147,42 @@ test("water towers stand on mid-rise roofs, clear of the roof's edge and its bul
       if (b.base >= roof - 1e-4 && overlaps(x, z, radius, b)) assert.fail(`tower at ${x}, ${z} meets a rooftop box`);
     }
     if (Math.hypot(x, z) < CAMERA_CLEARANCE) assert.ok(roof <= LOW_RISE_LIMIT);
+  }
+});
+
+test("cars drive only on roadways, never through the park or a river, and never meet", () => {
+  const cars = layoutTraffic();
+  assert.deepEqual(layoutTraffic(), cars);
+  assert.ok(cars.length / 8 > 300 && cars.length / 8 < 1200, `${cars.length / 8} cars`);
+  // Distance from a coordinate to the nearest grid line (spacing apart, starting at origin).
+  const offGrid = (value, origin, spacing) => Math.abs(value - origin - Math.round((value - origin) / spacing) * spacing);
+  const lanes = new Map();
+  for (let i = 0; i < cars.length; i += 8) {
+    const [x, z, length, heading, speed, phase, color] = cars.subarray(i, i + 8);
+    assert.ok(Number.isInteger(color) && color < CAR_PALETTE.length && speed > 0 && phase >= 0 && phase < 1);
+    const alongZ = heading === HEADING.south || heading === HEADING.north;
+    const sign = heading === HEADING.south || heading === HEADING.east ? 1 : -1;
+    for (let step = 0; step <= length; step += 0.5) {
+      const px = alongZ ? x : x + sign * step;
+      const pz = alongZ ? z + sign * step : z;
+      assert.ok(!inPark(px, pz, CAR.width), `car path in the park at ${px}, ${pz}`);
+      assert.ok(Math.abs(px) + CAR.length < manhattanHalfWidth(pz), `car path in a river at ${px}, ${pz}`);
+      assert.ok(Math.hypot(px, pz) <= TRAFFIC_RADIUS + 1, `car path outside the traffic area at ${px}, ${pz}`);
+      // The car's whole width stays on the roadway: the road less a sidewalk on each side.
+      const roadway = alongZ ? (AVENUE_WIDTH - 0.9) / 2 : (STREET_WIDTH - 0.6) / 2;
+      const off = alongZ ? offGrid(px, AVENUE_ORIGIN, AVENUE_SPACING) : offGrid(pz, MANHATTAN.north, STREET_SPACING);
+      assert.ok(off + CAR.width / 2 <= roadway, `car off the roadway at ${px}, ${pz}`);
+    }
+    const key = `${x},${z},${heading}`;
+    lanes.set(key, [...(lanes.get(key) ?? []), { phase, speed, length }]);
+  }
+  for (const lane of lanes.values()) {
+    assert.ok(lane.every((car) => car.speed === lane[0].speed), "cars on a lane share a speed");
+    const phases = lane.map((car) => car.phase).sort((a, b) => a - b);
+    const gap = (CAR.length + 0.3) / lane[0].length;
+    phases.forEach((phase, i) => {
+      const next = i + 1 < phases.length ? phases[i + 1] : phases[0] + 1;
+      if (phases.length > 1) assert.ok(next - phase >= gap, "two cars on one lane meet");
+    });
   }
 });
