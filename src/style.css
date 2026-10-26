@@ -115,9 +115,11 @@ a {
     animation-delay: 0s !important;
     transition-duration: 1ms !important;
   }
-  /* Endless loops (the ball, the floating capsule faces) stop instead of flickering at 1 ms. */
+  /* Endless loops (the balls, the floating capsule faces, the markers) stop instead of flickering at 1 ms. */
   .loading-screen::before,
-  .is-collapsed .island-face {
+  .is-collapsed .island-face,
+  .marker-bubble,
+  .scroll-ball {
     animation: none !important;
   }
 }
@@ -982,7 +984,7 @@ a {
 }
 
 /* Hidden under the loading screen anyway; skipping them keeps the first layout short. */
-body:not([data-state="ready"]) :is(.dock, .sky-status) {
+body:not([data-state="ready"]) :is(.dock, .sky-status, .markers, .tour-rail, .scroll-hint) {
   display: none;
 }
 
@@ -1013,4 +1015,221 @@ body:has(.loading-screen, .modal.is-open) {
 /* The last stop fills the largest viewport, so its snap point is reachable however tall the window is. */
 .tour-stop:last-child {
   height: 100lvh;
+}
+
+/* Marker bubbles over the props, like map pins: glossy badge, label, ground ring. */
+/* Above the docks: the nav's hover zone reaches down to where a marker can sit. */
+.markers {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  visibility: hidden;
+  pointer-events: auto;
+  transition: visibility 0s 0.4s;
+}
+
+.marker.is-visible {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.marker-bubble {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  color: #fff;
+  border: 3px solid var(--marker-rim);
+  border-radius: 50%;
+  box-shadow: var(--marker-shadow);
+  scale: 0;
+  transition: scale 0.45s var(--spring);
+  animation: marker-bob 2.6s ease-in-out infinite;
+}
+
+.marker-bubble svg {
+  width: 26px;
+  height: 26px;
+}
+
+.marker-pink .marker-bubble {
+  background: var(--marker-pink);
+}
+.marker-purple .marker-bubble {
+  background: var(--marker-purple);
+}
+.marker-teal .marker-bubble {
+  background: var(--marker-teal);
+}
+.marker-orange .marker-bubble {
+  background: var(--marker-orange);
+}
+
+.marker-label {
+  padding: 4px 12px;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
+  translate: 0 6px;
+  transition: opacity 0.3s, translate 0.45s var(--spring);
+}
+
+.marker::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--marker-rim);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.marker.is-visible .marker-bubble {
+  scale: 1;
+}
+
+.marker.is-visible .marker-label {
+  opacity: 1;
+  translate: 0 0;
+  transition-delay: 0.12s;
+}
+
+.marker.is-visible::after {
+  opacity: 1;
+}
+
+@keyframes marker-bob {
+  50% {
+    translate: 0 -6px;
+  }
+}
+
+@media (hover: hover) {
+  .marker:hover .marker-bubble {
+    scale: 1.12;
+  }
+}
+
+/* Stop rail, right edge: the current stop's name and one dot per stop. */
+.tour-rail {
+  position: fixed;
+  top: 50%;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  translate: 0 -50%;
+}
+
+.tour-rail-label,
+.tour-rail-dots,
+.scroll-hint {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow) 0 8px 22px;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+.tour-rail-label {
+  padding: 6px 14px;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.tour-rail-dots {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 1px;
+  border-radius: 999px;
+}
+
+/* Each button is a 24 px tap target; the dot inside is drawn by ::before. */
+.tour-rail-dots button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+.tour-rail-dots button::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--chip);
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  transition: scale 0.4s var(--spring), background 0.2s;
+}
+
+.tour-rail-dots button[aria-current]::before {
+  background: var(--accent);
+  border-color: var(--marker-rim);
+  scale: 1.5;
+}
+
+/* "Scroll to explore" with a bouncing ball, bottom centre, at the first stop only. */
+.scroll-hint {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 8px 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  border-radius: 999px;
+  translate: -50% 0;
+  transition: opacity 0.4s;
+}
+
+body:not([data-stop="hey"]) .scroll-hint {
+  opacity: 0;
+}
+
+.scroll-ball {
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle at 35% 30%, #ffc1d6, #f06292 55%, #c2185b);
+  border-radius: 50%;
+  animation: ball-bounce 1.1s ease-in-out infinite;
+}
+
+@keyframes ball-bounce {
+  50% {
+    translate: 0 5px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tour-rail {
+    right: 10px;
+  }
+  .tour-rail-label {
+    font-size: 0.8rem;
+  }
 }

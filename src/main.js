@@ -111,7 +111,7 @@ async function boot() {
   await revealIsland();
   setBackgroundInert(false);
   startDocks();
-  startTour();
+  startTour(island);
   noteWeather(await weatherRequest);
 }
 

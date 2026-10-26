@@ -18,6 +18,8 @@ const backgroundParts = [
   ".pill-nav",
   ".sky-status",
   ".hero-card",
+  ".markers",
+  ".tour-rail",
   "#experience",
 ].flatMap((selector) => [...document.querySelectorAll(selector)]);
 

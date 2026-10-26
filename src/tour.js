@@ -18,7 +18,7 @@ export const STOPS = [
     marker: "about me",
     action: "about",
     camera: [22, 8.2, 2.7],
-    target: [1.76, 1.25, 0.37],
+    target: [1.76, 1.6, 0.37],
   },
   {
     id: "work",
@@ -26,7 +26,7 @@ export const STOPS = [
     marker: "my work",
     action: "work",
     camera: [109, 6.8, 2.2],
-    target: [-0.17, 0.75, 1.99],
+    target: [-0.17, 1.0, 1.99],
   },
   {
     id: "writing",
@@ -34,7 +34,7 @@ export const STOPS = [
     marker: "writing",
     action: "https://sigdel29.substack.com",
     camera: [184, 6.4, 1.9],
-    target: [-2.07, 0.5, 0.36],
+    target: [-2.07, 0.7, 0.36],
   },
   {
     id: "contact",
@@ -42,7 +42,7 @@ export const STOPS = [
     marker: "say hey",
     action: "contact",
     camera: [294, 7.0, 2.3],
-    target: [0.36, 1.2, -2.07],
+    target: [0.36, 1.45, -2.07],
   },
   { id: "city", title: "new york, live", camera: [408.7, 34, 16], target: [0, 2, 0] },
 ];
