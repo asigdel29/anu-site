@@ -122,10 +122,12 @@ export async function loadIsland({ scene, camera, renderer, yieldToMain }) {
   islandMaterial.uniforms.uDayTexture.value = textures[0];
   islandMaterial.uniforms.uNightTexture.value = textures[1];
 
+  // Each upload gets a task of its own, apart from the mesh unpacking before it.
   for (const texture of textures) {
+    await yieldToMain("texture upload");
     renderer.initTexture(texture);
-    await yieldToMain("next texture upload");
   }
+  await yieldToMain("island shaders");
 
   scene.add(island);
   await renderer.compileAsync(scene, camera);

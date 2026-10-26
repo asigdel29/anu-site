@@ -2,7 +2,7 @@
 
 Run from the repo root:
     /Applications/Blender.app/Contents/MacOS/Blender -b blender/island.blend \
-        --python tools/blender/bake_export.py -- --size 4096 --samples 1024
+        --python tools/blender/bake_export.py -- --size 1536 --samples 64
 
 Outputs:
     public/models/island.bin
@@ -41,7 +41,9 @@ MOBILE_MAX = 1024
 def parse_args():
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
-    parser.add_argument("--size", type=int, default=4096, help="desktop atlas size in px")
+    # ponytail: 1536 keeps one desktop upload under the 20 ms budget on software GL; upload in
+    # tiles across tasks if the atlas ever needs more pixels.
+    parser.add_argument("--size", type=int, default=1536, help="desktop atlas size in px")
     parser.add_argument("--samples", type=int, default=1024, help="Cycles samples per bake")
     return parser.parse_args(argv)
 
