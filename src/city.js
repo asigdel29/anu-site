@@ -424,6 +424,91 @@ export function layoutTrees(seed = 1858) {
   return new Float32Array(trees);
 }
 
+/** Cars drive only within this distance of the island, where the cameras see them. */
+export const TRAFFIC_RADIUS = 220;
+
+/** Car length and width in metres, chunkier than real (about 1.1 times), so the cars read. */
+export const CAR = { length: 0.5, width: 0.24 };
+
+/** Metres of lane per car: the avenues are busier than the side streets. */
+const CAR_SPACING = { avenue: 22, street: 50 };
+
+/** How far the lanes sit from each road's centre line: three on an avenue, one on a street. */
+const LANE_OFFSETS = { avenue: [-0.7, 0, 0.7], street: [0] };
+
+/** Headings a lane can have, as the packed number the traffic shader reads. */
+export const HEADING = { south: 0, north: 1, east: 2, west: 3 };
+
+/** Car colours by index (sRGB): taxi yellow first, then bright stylized paints. */
+export const CAR_PALETTE = ["#FFC21A", "#E8453C", "#2F7FE0", "#F2F2F0", "#2B2D36", "#B8C2CC", "#3CB371"];
+
+/**
+ * Cuts the stretch [from, to] of a road into the parts that stay clear of the gaps (each a
+ * [from, to] stretch the road must not enter, such as Central Park), dropping parts too short
+ * for traffic.
+ */
+function openStretches(from, to, gaps) {
+  let stretches = [[from, to]];
+  for (const [gapFrom, gapTo] of gaps) {
+    stretches = stretches.flatMap(([start, end]) =>
+      [[start, Math.min(end, gapFrom)], [Math.max(start, gapTo), end]].filter(([a, b]) => b - a > 0)
+    );
+  }
+  return stretches.filter(([start, end]) => end - start > 8);
+}
+
+/**
+ * Lays out the traffic on Manhattan's avenues and streets near the island. The avenues are
+ * one-way with three lanes, the streets one-way with one, in turn. Every lane stops short of
+ * Central Park, the rivers and the edge of the traffic area, and the cars on a lane share its
+ * speed, evenly spaced, so they never meet. Returns packed cars, eight numbers each: lane start
+ * x and z, lane length, heading, then speed in metres a second, phase (0..1 along the lane),
+ * colour index and 0.
+ */
+export function layoutTraffic(seed = 1904) {
+  const random = seeded(seed);
+  const cars = [];
+  const margin = 1.5;
+  const addLane = (x, z, length, heading, spacing, speed) => {
+    const count = Math.floor((length / spacing) * (0.7 + 0.6 * random()));
+    for (let i = 0; i < count; i++) {
+      const phase = (i + 0.3 * random()) / count;
+      const color = random() < 0.35 ? 0 : 1 + Math.floor(random() * (CAR_PALETTE.length - 1));
+      cars.push(x, z, length, heading, speed, phase, color, 0);
+    }
+  };
+
+  // Avenues run north-south; the two that meet the park stop at its edges.
+  for (let index = 0, x = AVENUE_ORIGIN; x < MANHATTAN.halfWidth; index++, x += AVENUE_SPACING) {
+    const reach = Math.sqrt(Math.max(TRAFFIC_RADIUS ** 2 - x ** 2, 0));
+    if (Math.abs(x) + AVENUE_WIDTH / 2 + margin > MANHATTAN.halfWidth || reach < 8) continue;
+    const parkGap = Math.abs(x) - AVENUE_WIDTH / 2 < PARK.maxX ? [[PARK.minZ - margin, PARK.maxZ + margin]] : [];
+    const southbound = index % 2 === 0;
+    const speed = 1.6 + random() * 0.6;
+    for (const [from, to] of openStretches(Math.max(-reach, MANHATTAN.north + margin), reach, parkGap)) {
+      for (const offset of LANE_OFFSETS.avenue) {
+        const start = southbound ? from : to;
+        addLane(x + offset, start, to - from, southbound ? HEADING.south : HEADING.north, CAR_SPACING.avenue, speed);
+      }
+    }
+  }
+
+  // Streets run east-west; those beside the park stop at its edges.
+  for (let index = 0, z = MANHATTAN.north + STREET_SPACING; z < MANHATTAN.south; index++, z += STREET_SPACING) {
+    const reach = Math.sqrt(Math.max(TRAFFIC_RADIUS ** 2 - z ** 2, 0));
+    if (reach < 8) continue;
+    const halfWidth = Math.min(manhattanHalfWidth(z - STREET_WIDTH), manhattanHalfWidth(z + STREET_WIDTH)) - margin;
+    const besidePark = z + STREET_WIDTH / 2 > PARK.minZ && z - STREET_WIDTH / 2 < PARK.maxZ;
+    const parkGap = besidePark ? [[PARK.minX - margin, PARK.maxX + margin]] : [];
+    const eastbound = index % 2 === 0;
+    const speed = 1.0 + random() * 0.5;
+    for (const [from, to] of openStretches(Math.max(-reach, -halfWidth), Math.min(reach, halfWidth), parkGap)) {
+      addLane(eastbound ? from : to, z, to - from, eastbound ? HEADING.east : HEADING.west, CAR_SPACING.street, speed);
+    }
+  }
+  return new Float32Array(cars);
+}
+
 /** Packs building records into the typed arrays the instanced mesh reads. */
 export function packCity(buildings) {
   const footprint = new Float32Array(buildings.length * 4);
@@ -437,8 +522,14 @@ export function packCity(buildings) {
   return { footprint, shape, look };
 }
 
-/** Everything the city meshes read: packed buildings, trees, aviation lights and water towers. */
+/** Everything the city meshes read: packed buildings, trees, aviation lights, water towers and cars. */
 export function buildCityArrays() {
   const buildings = layoutCity();
-  return { ...packCity(buildings), trees: layoutTrees(), lights: layoutLights(buildings), towers: layoutWaterTowers(buildings) };
+  return {
+    ...packCity(buildings),
+    trees: layoutTrees(),
+    lights: layoutLights(buildings),
+    towers: layoutWaterTowers(buildings),
+    traffic: layoutTraffic(),
+  };
 }
