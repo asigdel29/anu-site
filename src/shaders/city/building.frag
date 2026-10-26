@@ -19,6 +19,11 @@ varying vec4 vKind;
 
 // Cornice depth below each roof line, in metres.
 const float CORNICE = 0.16;
+// Storefront height above the street, and the width of one shop, in metres.
+const float SHOP = 0.42;
+const float SHOP_WIDTH = 0.9;
+// Awning colours: red, green, navy and yellow.
+const vec3 AWNING[4] = vec3[4](vec3(0.86, 0.24, 0.2), vec3(0.18, 0.6, 0.34), vec3(0.18, 0.3, 0.62), vec3(0.98, 0.76, 0.2));
 
 void main()
 {
@@ -39,9 +44,18 @@ void main()
     float corniceShadow = ledge * clamp((CORNICE + 0.07 - belowTop) / pixel + 0.5, 0.0, 1.0) - cornice;
     material = mix(material, mix(material, vec3(1.0, 0.93, 0.78), 0.55), cornice) * (1.0 - 0.35 * corniceShadow);
 
+    // Storefronts on every building that stands on the street: shop windows between stone piers
+    // under a coloured awning, one shop every SHOP_WIDTH metres.
+    float street = wall * vKind.z * (1.0 - step(0.01, vShape.x));
+    float shops = street * clamp((SHOP - vFacade.y) / pixel + 0.5, 0.0, 1.0);
+    float awning = street * clamp((SHOP + 0.1 - vFacade.y) / pixel + 0.5, 0.0, 1.0) - shops;
+    float shopCell = vFacade.x / SHOP_WIDTH;
+    float shopGlass = shops * filteredPulse(shopCell, fwidth(shopCell), 0.12, 0.88) * clamp((SHOP - 0.06 - vFacade.y) / pixel + 0.5, 0.0, 1.0);
+    vec3 awningColor = awning > 0.0 ? AWNING[int(hash(vec2(floor(shopCell), vShape.w * 97.0)) * 3.99)] : vec3(0.0);
+
     vec2 grid = vFacade.xy / vCellSize;
     vec2 width = fwidth(grid);
-    float window = wall * vKind.y * (1.0 - cornice - corniceShadow)
+    float window = wall * vKind.y * (1.0 - cornice - corniceShadow) * (1.0 - shops - awning)
         * filteredPulse(grid.x, width.x, vPane.x, vPane.y) * filteredPulse(grid.y, width.y, vPane.z, vPane.w);
     // Near windows show their own pattern; far away, where a pixel spans many windows, the average
     // takes over so nothing sparkles (and no window is worked out).
@@ -80,6 +94,9 @@ void main()
         float glint = glintDetail > 0.0 ? glintDetail * step(0.55, hash(cell + 7.0)) * (1.0 - smoothstep(0.05, 0.11, abs(inPane.x - inPane.y + 0.25))) : 0.0;
         vec3 glass = mix(tint, mix(uSky, vec3(1.0), 0.25), min(reflection, 0.9)) * mix(0.8, 1.0, sunSide) + 0.3 * glint;
         vec3 day = mix(material * light, glass, window) * gradient;
+        // Shop windows mirror the sky like the windows above; awnings take the sun.
+        day = mix(day, mix(vec3(0.1, 0.28, 0.4), mix(uSky, vec3(1.0), 0.25), 0.3 + 0.3 * facing), shopGlass);
+        day = mix(day, awningColor * light, awning);
         // The rim is warm on the sunny side and cool in the shade.
         color = mix(day, mix(vec3(0.75, 0.82, 1.0), vec3(1.0, 0.95, 0.82), sunSide), rim * 0.45);
     }
@@ -104,9 +121,12 @@ void main()
         nightWall += material * vec3(0.6, 0.35, 0.15) * wall * (1.0 - smoothstep(0.0, 2.5, vFacade.y));
         vec3 night = mix(nightWall, mix(vec3(0.06, 0.08, 0.2), lamp, lit), window) + vec3(0.15, 0.17, 0.35) * rim;
         night = mix(night, vBase * 1.1 + vec3(0.15, 0.12, 0.05) * smoothstep(0.0, 3.0, vFacade.y - vShape.x), vShape.z);
+        // The shops stay lit late, under awnings caught in their light.
+        night = mix(night, vec3(1.0, 0.78, 0.46) * 1.15, shopGlass);
+        night = mix(night, awningColor * 0.35 + vec3(0.12, 0.07, 0.03), awning);
         color = mix(color, night, uMixRatio);
-        // Lit windows and crowns shine through some of the haze at night.
-        glow = (window * lit + vShape.z) * uMixRatio;
+        // Lit windows, shops and crowns shine through some of the haze at night.
+        glow = (window * lit + shopGlass + vShape.z) * uMixRatio;
     }
     gl_FragColor = vec4(mix(color, uSky, hazeAmount(vWorld) * (1.0 - 0.5 * glow)), 1.0);
 }

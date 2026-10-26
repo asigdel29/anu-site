@@ -446,22 +446,39 @@ function inEllipses(x, z, ellipses, margin = 0) {
 /** Tree colours by index (sRGB), punchy like stylized game trees: four greens, two cherry blossom pinks, and a spring lime. */
 export const TREE_PALETTE = ["#2F9A45", "#3FAE48", "#56BE45", "#74C83C", "#FF6FA8", "#FF8FBF", "#B4DC3A"];
 
+/** How far in from the park's edge the row of trees along its wall stands, and how far apart, in metres. */
+const EDGE_ROW = { inset: 1.4, spacing: 3.2 };
+
 /**
- * Plants Central Park on a jittered 3.6 m grid, leaving the water and the lawns open. The grid is
- * wide and the crowns big, so the park looks full with few trees to draw.
+ * Plants Central Park: a neat row of trees along its wall on all four sides, as the avenues and
+ * streets around it are lined, then a jittered 3.6 m grid inside, leaving the water and the lawns
+ * open. The grid is wide and the crowns big, so the park looks full with few trees to draw.
  * Returns packed trees: x, z, crown radius, colour index.
  */
 export function layoutTrees(seed = 1858) {
   const random = seeded(seed);
   const trees = [];
+  const color = () => {
+    const roll = random();
+    return roll < 0.76 ? Math.floor(random() * 4) : roll < 0.94 ? 4 + Math.floor(random() * 2) : 6;
+  };
+  const { inset, spacing } = EDGE_ROW;
+  const west = PARK.minX + inset;
+  const east = PARK.maxX - inset;
+  const north = PARK.minZ + inset;
+  const south = PARK.maxZ - inset;
+  const row = [];
+  for (let x = west; x <= east; x += spacing) row.push([x, north], [x, south]);
+  for (let z = north + spacing; z < south; z += spacing) row.push([west, z], [east, z]);
+  for (const [x, z] of row) {
+    if (!inEllipses(x, z, PARK_WATER, 1)) trees.push(x, z, 1.1 + random() * 0.3, color());
+  }
   for (let x = PARK.minX + 1.5; x < PARK.maxX - 1; x += 3.6) {
     for (let z = PARK.minZ + 1.5; z < PARK.maxZ - 1; z += 3.6) {
       const tx = x + (random() - 0.5) * 2.6;
       const tz = z + (random() - 0.5) * 2.6;
-      if (random() < 0.15 || !inPark(tx, tz, -1) || inEllipses(tx, tz, PARK_WATER, 1.5) || inEllipses(tx, tz, PARK_LAWNS)) continue;
-      const roll = random();
-      const color = roll < 0.76 ? Math.floor(random() * 4) : roll < 0.94 ? 4 + Math.floor(random() * 2) : 6;
-      trees.push(tx, tz, 1.4 + random() * 1.2, color);
+      if (random() < 0.15 || !inPark(tx, tz, -3) || inEllipses(tx, tz, PARK_WATER, 1.5) || inEllipses(tx, tz, PARK_LAWNS)) continue;
+      trees.push(tx, tz, 1.4 + random() * 1.2, color());
     }
   }
   return new Float32Array(trees);

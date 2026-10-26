@@ -209,3 +209,17 @@ test("each bridge spans the East River from Manhattan to Brooklyn, with nothing 
   const crossings = BRIDGES.map((bridge) => bridge.z).sort((a, b) => a - b);
   crossings.slice(1).forEach((z, i) => assert.ok(z - crossings[i] > 15, "bridges stand apart"));
 });
+
+test("a row of trees lines all four sides of the park", () => {
+  const trees = layoutTrees();
+  const sides = { west: 0, east: 0, north: 0, south: 0 };
+  for (let i = 0; i < trees.length; i += 4) {
+    const [x, z] = [trees[i], trees[i + 1]];
+    if (Math.abs(x - PARK.minX - 1.4) < 1e-3) sides.west++;
+    if (Math.abs(PARK.maxX - x - 1.4) < 1e-3) sides.east++;
+    if (Math.abs(z - PARK.minZ - 1.4) < 1e-3) sides.north++;
+    if (Math.abs(PARK.maxZ - z - 1.4) < 1e-3) sides.south++;
+  }
+  assert.ok(sides.west > 80 && sides.east > 80, `rows along the avenues: ${JSON.stringify(sides)}`);
+  assert.ok(sides.north > 15 && sides.south > 15, `rows along the streets: ${JSON.stringify(sides)}`);
+});
