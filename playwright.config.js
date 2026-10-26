@@ -8,7 +8,8 @@ const baseURL = process.env.BASE_URL ?? "http://localhost:4173";
 export default defineConfig({
   testDir: "tests",
   testMatch: "*.spec.js",
-  timeout: 60_000,
+  // CI renders WebGL in software, so the smoke test alone takes 50 to 60 s there.
+  timeout: 120_000,
   // One worker: the perf test measures main-thread time and must not share the CPU.
   workers: 1,
   // CI runners render WebGL in software and are noisy; a real regression still fails twice.
