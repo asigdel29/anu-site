@@ -1,6 +1,6 @@
 # anu's island
 
-The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 3D New York in toy-model colours, and the sky follows the live New York weather. The visitor scrolls to fly around the island. The site uses Vite and Three.js.
+The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 3D New York in a stylized game look, and the sky follows the live New York weather. The visitor scrolls to fly around the island. The site uses Vite and Three.js.
 
 ## What is on the page
 
@@ -9,7 +9,7 @@ The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 
 - **The city:** Manhattan at about 1:10 in a sunny stylized look, with warm brick, cream stone and teal glass. It has its street grid, Central Park, the Hudson, the East River and the boroughs beyond.
 - **Landmarks:** about 25 towers that people know New York by, from the Plaza to One World Trade Center.
 - **The park:** about 1,200 stylized trees with round clustered canopies in green, cherry blossom pink and spring lime, with the Reservoir, the Lake, the Pond and the lawns. The trees sway in the wind.
-- **Day and night:** the day sky is a bright cyan and the night a deep indigo. At night, windows glow warm yellow and orange and change slowly, crowns are floodlit, streets glow and aviation lights flash.
+- **Day and night:** the day sky runs from a light horizon to a deep blue overhead, with a glow around the sun. The night sky is a deep indigo with stars. At night, windows glow warm yellow and orange and change slowly, crowns are floodlit, streets glow and aviation lights flash.
 - **Live weather:** clouds, wind, rain, snow, fog and thunder follow New York now (data from Open-Meteo). The first visit starts in night mode after dark in New York.
 - **The scroll tour:** each scroll moves the camera one stop: in from the city to the stick figure, around the island to each prop, then out to a high view of New York. At each prop, a marker badge opens its section. A rail on the right shows the stops.
 - **Content:** the nav at the top opens the work, about and contact dialogs. 5 seconds after the island appears, the nav and the hero card fold into small game-style capsules. Hover, focus or a tap opens them again.
@@ -41,7 +41,7 @@ The site stays under the budget because of these rules:
 
 - The site has one runtime dependency (`three`). Animation, audio and styles use the platform.
 - A worker builds the city layout, so its thousands of buildings never block the page.
-- The whole scene is eight draw calls. All buildings are one instanced draw call, and all trees are another.
+- The whole scene is about a dozen draw calls (12 on a clear day). All buildings are one instanced draw call, all park trees are another, and so are all petals, clouds, cars and water towers.
 - Shaders draw the windows, the streets and the water, so the city needs no textures.
 - The WebGL context, the renderer, each texture upload and each first draw run in separate tasks.
 - Images decode off the main thread, and shaders compile with `compileAsync`.
