@@ -296,6 +296,41 @@ export function layoutLights(buildings) {
   return new Float32Array(lights);
 }
 
+/**
+ * Water tower tank radius in metres at size 1; the legs and the roof scale with it. It is about
+ * 1.5 times the real size, so the towers read from the tour's cameras.
+ */
+export const TOWER_RADIUS = 0.45;
+
+/** The share of candidate roofs that carry a water tower, in Manhattan and in the boroughs. */
+const TOWER_SHARE = { manhattan: 0.14, borough: 0.06 };
+
+/**
+ * Puts the wooden water tanks New York is known for on some mid-rise roofs: brick and band
+ * facades from 3 to 14 m tall (landmarks and towers have none), one per roof, in a corner, clear
+ * of the bulkhead at the roof's centre. Returns packed towers: x, z, roof height, size.
+ */
+export function layoutWaterTowers(buildings, seed = 1880) {
+  const random = seeded(seed);
+  const landmarks = new Set(LANDMARKS);
+  const towers = [];
+  for (const b of buildings) {
+    if (landmarks.has(b) || b.base !== 0 || b.light !== LIGHT.none || b.height < 3 || b.height > 14) continue;
+    if (b.style !== STYLE.punched && b.style !== STYLE.bands) continue;
+    const share = Math.abs(b.x) < BOROUGH_EDGE ? TOWER_SHARE.manhattan : TOWER_SHARE.borough;
+    if (random() > share) continue;
+    const size = 0.85 + random() * 0.3;
+    const radius = TOWER_RADIUS * size;
+    const margin = radius + 0.15;
+    const east = random() < 0.5 ? -1 : 1;
+    const south = random() < 0.5 ? -1 : 1;
+    // The bulkhead covers the middle 40% of the roof's width and 50% of its depth.
+    if (b.width * 0.3 < margin + radius || b.depth * 0.25 < margin + radius) continue;
+    towers.push(b.x + east * (b.width / 2 - margin), b.z + south * (b.depth / 2 - margin), b.height, size);
+  }
+  return new Float32Array(towers);
+}
+
 /** True when a lot's footprint overlaps a landmark's, so the landmark takes its place. */
 function underLandmark(lot) {
   return LANDMARKS.some(
@@ -402,8 +437,8 @@ export function packCity(buildings) {
   return { footprint, shape, look };
 }
 
-/** Everything the city meshes read: packed buildings, trees and aviation lights. */
+/** Everything the city meshes read: packed buildings, trees, aviation lights and water towers. */
 export function buildCityArrays() {
   const buildings = layoutCity();
-  return { ...packCity(buildings), trees: layoutTrees(), lights: layoutLights(buildings) };
+  return { ...packCity(buildings), trees: layoutTrees(), lights: layoutLights(buildings), towers: layoutWaterTowers(buildings) };
 }

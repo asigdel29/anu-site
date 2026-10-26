@@ -16,11 +16,13 @@ import {
   PARK_WATER,
   STREET_SPACING,
   STYLE,
+  TOWER_RADIUS,
   TREE_PALETTE,
   inPark,
   layoutLights,
   layoutTrees,
   layoutCity,
+  layoutWaterTowers,
   buildCityArrays,
   manhattanHalfWidth,
 } from "../src/city.js";
@@ -65,12 +67,13 @@ test("every landmark stands, and no ordinary lot overlaps one", () => {
 });
 
 test("the arrays the meshes read hold one entry per building, tree and light", () => {
-  const { footprint, shape, look, trees, lights } = buildCityArrays();
+  const { footprint, shape, look, trees, lights, towers } = buildCityArrays();
   assert.equal(footprint.length, buildings.length * 4);
   assert.equal(shape.length, buildings.length * 4);
   assert.equal(look.length, buildings.length * 4);
   assert.equal(trees.length, layoutTrees().length);
   assert.equal(lights.length, layoutLights(buildings).length);
+  assert.equal(towers.length, layoutWaterTowers(buildings).length);
 });
 
 test("trees grow in the park and never in its water", () => {
@@ -114,4 +117,25 @@ test("every tree has a colour, and blossom trees stay a minority", () => {
   }
   const share = blossoms / (trees.length / 4);
   assert.ok(share > 0.08 && share < 0.3, `blossom share ${share}`);
+});
+
+test("water towers stand on mid-rise roofs, clear of the roof's edge and its bulkhead", () => {
+  const towers = layoutWaterTowers(buildings);
+  assert.deepEqual(layoutWaterTowers(buildings), towers);
+  assert.ok(towers.length / 4 > 300 && towers.length / 4 < 1200, `${towers.length / 4} towers`);
+  const inside = (x, z, radius, part) =>
+    Math.abs(x - part.x) + radius <= part.width / 2 && Math.abs(z - part.z) + radius <= part.depth / 2;
+  const overlaps = (x, z, radius, part) =>
+    Math.abs(x - part.x) < part.width / 2 + radius && Math.abs(z - part.z) < part.depth / 2 + radius;
+  for (let i = 0; i < towers.length; i += 4) {
+    const [x, z, roof, size] = towers.subarray(i, i + 4);
+    const radius = TOWER_RADIUS * size;
+    const under = buildings.filter((b) => Math.abs(b.base + b.height - roof) < 1e-4 && inside(x, z, radius, b));
+    assert.ok(under.length > 0, `tower at ${x}, ${z} is not on a roof`);
+    assert.ok(roof >= 3 && roof <= 14, `tower on a ${roof} m roof`);
+    for (const b of buildings) {
+      if (b.base >= roof - 1e-4 && overlaps(x, z, radius, b)) assert.fail(`tower at ${x}, ${z} meets a rooftop box`);
+    }
+    if (Math.hypot(x, z) < CAMERA_CLEARANCE) assert.ok(roof <= LOW_RISE_LIMIT);
+  }
 });
