@@ -9,7 +9,13 @@ import {
   CAMERA_CLEARANCE,
   LANDMARKS,
   LOW_RISE_LIMIT,
+  MANHATTAN,
+  PALETTE,
+  PARK,
+  PARK_TRANSVERSES,
   PARK_WATER,
+  STREET_SPACING,
+  STYLE,
   inPark,
   layoutLights,
   layoutTrees,
@@ -80,4 +86,20 @@ test("aviation lights sit on the tall tops only", () => {
   const lights = layoutLights(buildings);
   assert.ok(lights.length / 4 > 100, `${lights.length / 4} lights`);
   for (let i = 1; i < lights.length; i += 4) assert.ok(lights[i] > 18);
+});
+
+test("every building names a facade style and a colour that the shader has", () => {
+  const styles = Object.values(STYLE);
+  for (const b of buildings) {
+    assert.ok(styles.includes(b.style), `style ${b.style}`);
+    assert.ok(Number.isInteger(b.palette) && b.palette >= 0 && b.palette < PALETTE.length, `palette ${b.palette}`);
+  }
+});
+
+test("the transverse roads cross the park on street lines", () => {
+  for (const z of PARK_TRANSVERSES) {
+    assert.ok(z > PARK.minZ && z < PARK.maxZ, `transverse at ${z}`);
+    const streets = (z - MANHATTAN.north) / STREET_SPACING;
+    assert.ok(Math.abs(streets - Math.round(streets)) < 1e-9, `transverse at ${z} is off the street grid`);
+  }
 });

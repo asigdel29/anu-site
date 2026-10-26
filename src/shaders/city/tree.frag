@@ -1,4 +1,4 @@
-// Park tree crowns: soft toy facets lit by the sun by day, deep candy shades with a lilac moon
+// Park tree crowns: facets lit by the shared city sun by day, deep candy shades with a lilac moon
 // light on top by night, hazed like the rest of the city.
 
 uniform float uMixRatio;
@@ -7,7 +7,6 @@ uniform vec3 uTreePalette[7];
 varying vec3 vWorld;
 varying float vColor;
 
-const vec3 SUN = vec3(0.45, 0.8, 0.4);
 const vec3 MOON = vec3(-0.5, 0.7, -0.3);
 
 void main()

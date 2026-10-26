@@ -38,14 +38,14 @@ export const LOW_RISE_LIMIT = 12;
 export const STYLE = { punched: 0, glass: 1, bands: 2, piers: 3, grid: 4 };
 
 /**
- * Day colours (sRGB) the shader picks by index, in toy-model pastels and candy colours. Each
- * slot keeps its role: brick (pink), brownstone (peach), limestone (sand), cream, concrete
- * (lilac), three glasses (sky blue, violet, mint), then the landmark trims: copper (green),
- * steel (ice), gold (yellow) and white.
+ * Day colours (sRGB) the shader picks by index, warm and saturated like a sunny stylized game
+ * world. Each slot keeps its role: red brick, brownstone, warm limestone, cream stone, concrete,
+ * three glasses (blue, teal, deep blue), the landmark trims (copper verdigris, art deco steel,
+ * gold, white terracotta), then dark red brick, orange brick, warm taupe and dark glass.
  */
 export const PALETTE = [
-  "#F59BBB", "#FFA86B", "#F6D59C", "#FFEFC9", "#C6B0F3", "#63BFF4", "#A182EC", "#6DD3AA",
-  "#4FB85A", "#DDEFFC", "#FFD34D", "#FFFFFF",
+  "#C4553A", "#9A5A3C", "#E8CF98", "#F6E3B8", "#BDB1A5", "#3F8FD8", "#2FB0B8", "#2C6AA8",
+  "#43C9A2", "#D5E6F2", "#FFC93C", "#FFF5E4", "#A8402E", "#E0904F", "#8F7D74", "#24548A",
 ];
 
 /** How a part shows: windows, a crown floodlit at night, or bare (no windows: spires, masts, rooftop boxes). */
@@ -198,17 +198,28 @@ function boroughHeight(x, z, random) {
   return 1.2 + random() * 2.5 + clusterHeight(x, z) * random();
 }
 
+/**
+ * Palette slots per facade style, repeats weighting the pick: brick dominates the low and
+ * mid-rise lots, stone and concrete the setback towers, and tinted glass the modern ones.
+ */
+const MATERIALS = {
+  punched: [0, 0, 12, 13, 13, 1, 2, 14],
+  bands: [3, 4, 13, 0],
+  piers: [2, 4, 13, 12],
+  glass: [5, 6, 7, 15],
+};
+
 /** Facade look for a height: tall lots are glass, setback piers or bands; low ones brick and stone. */
 function lotLook(height, random) {
   const roll = random();
-  const pick = (first, count) => first + Math.floor(random() * count);
+  const pick = (slots) => slots[Math.floor(random() * slots.length)];
   if (height > 14) {
-    if (roll < 0.55) return { style: STYLE.glass, palette: pick(5, 3) };
-    if (roll < 0.8) return { style: STYLE.piers, palette: pick(2, 3) };
-    return { style: STYLE.bands, palette: pick(3, 2) };
+    if (roll < 0.45) return { style: STYLE.glass, palette: pick(MATERIALS.glass) };
+    if (roll < 0.8) return { style: STYLE.piers, palette: pick(MATERIALS.piers) };
+    return { style: STYLE.bands, palette: pick(MATERIALS.bands) };
   }
-  if (height > 7 && roll < 0.3) return { style: STYLE.bands, palette: pick(3, 2) };
-  return { style: STYLE.punched, palette: pick(0, 4) };
+  if (height > 7 && roll < 0.3) return { style: STYLE.bands, palette: pick(MATERIALS.bands) };
+  return { style: STYLE.punched, palette: pick(MATERIALS.punched) };
 }
 
 /**
@@ -346,13 +357,16 @@ export const PARK_LAWNS = [
   [-14, (blockSouthOf(69) + blockSouthOf(66)) / 2, 12, 8], // Sheep Meadow
 ];
 
+/** City-space z of the sunken roads that cross Central Park at 65th, 79th, 86th and 97th Street. */
+export const PARK_TRANSVERSES = [65, 79, 86, 97].map((street) => blockSouthOf(street) - STREET_SPACING / 2);
+
 /** True inside any of the ellipses, grown by margin metres. */
 function inEllipses(x, z, ellipses, margin = 0) {
   return ellipses.some(([cx, cz, rx, rz]) => ((x - cx) / (rx + margin)) ** 2 + ((z - cz) / (rz + margin)) ** 2 < 1);
 }
 
-/** Tree colours by index (sRGB), bright like toy trees: four greens, two cherry blossom pinks, and yellow. */
-export const TREE_PALETTE = ["#3FAF5A", "#5DBB63", "#7BCB6B", "#8FD86A", "#F48FB1", "#FF8DB9", "#FFD54A"];
+/** Tree colours by index (sRGB), punchy like stylized game trees: four greens, two cherry blossom pinks, and a spring lime. */
+export const TREE_PALETTE = ["#2F9A45", "#3FAE48", "#56BE45", "#74C83C", "#FF6FA8", "#FF8FBF", "#B4DC3A"];
 
 /**
  * Plants Central Park on a jittered 3.2 m grid, leaving the water and the lawns open.
