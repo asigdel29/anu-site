@@ -81,7 +81,7 @@ To add a stop:
 - Yellow taxis and other cars drive one way along the avenues and streets near the island. The vertex shader moves them from the clock, so the main thread does no work for them. Each lane stops short of the park and the rivers. At night the cars show white headlights and red tail lights. When the visitor asks for less motion, they stand still.
 - Three bridges cross the East River: the Brooklyn Bridge with its granite gothic towers and diagonal cable web, the blue Manhattan Bridge and the red Williamsburg Bridge. `BRIDGES` in `src/city.js` holds them, and the lots under their ramps stay empty. At night their cables wear a string of lights. All three are one draw call.
 - Each park tree is a trunk under four round canopy lobes. Each lobe has only 14 faces, so the park stays cheap to draw. The canopy is dark at its core and bright at its top. The trees sway in the wind, but not when the visitor asks for less motion.
-- Without a GPU (software WebGL, as in CI), the trees draw only their trunk and core lobe and the water towers stay hidden. Software WebGL pays for every triangle on the CPU, so this keeps the page usable there.
+- Without a GPU (software WebGL, as in CI), the trees draw only their trunk and core lobe, and the water towers and the cars stay hidden. Software WebGL pays for every triangle on the CPU, so this keeps the page usable there.
 
 To add a landmark:
 

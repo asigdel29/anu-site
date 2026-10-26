@@ -429,17 +429,17 @@ function drawsInSoftware(gl) {
 
 /**
  * Lightens the city when WebGL draws in software: the trees draw only their trunk and core lobe,
- * and the water towers stay hidden. The check needs the renderer, so it runs once, at the trees'
- * first draw (during the warm-up, before the towers' turn).
+ * and the water towers and the cars stay hidden. The check needs the renderer, so it runs once,
+ * at the trees' first draw (during the warm-up, before the towers' and the cars' turn).
  */
 function lightenWithoutGpu(group) {
   const trees = group.getObjectByName("city trees");
-  const towers = group.getObjectByName("city water towers");
+  const hidden = ["city water towers", "city traffic"].map((name) => group.getObjectByName(name));
   trees.onBeforeRender = (renderer) => {
     trees.onBeforeRender = () => {};
     if (!drawsInSoftware(renderer.getContext())) return;
     trees.geometry.setDrawRange(0, trees.geometry.userData.coreIndices);
-    towers.visible = false;
+    for (const part of hidden) part.visible = false;
   };
 }
 
