@@ -114,9 +114,13 @@ const TREE_LOBES = [
  */
 function treeGeometry() {
   const trunk = new CylinderGeometry(0.09, 0.14, 0.9, 6, 1, true).translate(0, 0.45, 0).deleteAttribute("uv");
-  const lobes = TREE_LOBES.map(([x, y, z, radius]) =>
-    mergeVertices(new IcosahedronGeometry(radius, 1).translate(x, y, z).deleteAttribute("uv"))
-  );
+  const lobes = TREE_LOBES.map(([x, y, z, radius]) => {
+    // A 20-face lobe with sphere normals: few triangles, but it still shades round.
+    const lobe = new IcosahedronGeometry(radius, 0).deleteAttribute("uv");
+    lobe.setAttribute("normal", lobe.getAttribute("position").clone());
+    lobe.normalizeNormals();
+    return mergeVertices(lobe.translate(x, y, z));
+  });
   const geometry = mergeGeometries([trunk, ...lobes]);
   const bottom = Math.min(...TREE_LOBES.map(([, y, , radius]) => y - radius));
   const top = Math.max(...TREE_LOBES.map(([, y, , radius]) => y + radius));

@@ -77,7 +77,7 @@ To add a stop:
 - Each building gets brighter toward its top. Its corners have a bright rim, each roof line has a cornice, and each roof has a pale parapet.
 - Windows reflect the sky by day and glow warm by night. Copper and gold roofs have no windows.
 - The streets have asphalt roadways, sidewalks, lane dashes and crosswalks. The water has a foam line along each shore and glints in the sun.
-- Each park tree is a trunk under five round canopy lobes. The canopy is dark at its core and bright at its top. The trees sway in the wind, but not when the visitor asks for less motion.
+- Each park tree is a trunk under five round canopy lobes of 20 faces each. The canopy is dark at its core and bright at its top. The trees sway in the wind, but not when the visitor asks for less motion.
 
 To add a landmark:
 
