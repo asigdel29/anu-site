@@ -11,7 +11,7 @@ The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 
 - **The park:** about 1,400 trees in green, cherry blossom pink and yellow, with the Reservoir, the Lake, the Pond and the lawns.
 - **Day and night:** the day sky is a bright cyan and the night a deep indigo. At night, windows light up in candy colours and change slowly, crowns are floodlit, streets glow and aviation lights flash.
 - **Live weather:** clouds, wind, rain, snow, fog and thunder follow New York now (data from Open-Meteo). The first visit starts in night mode after dark in New York.
-- **The scroll tour:** each scroll moves the camera one stop: in from the city to the stick figure, around the island to each prop, then out to a high view of New York. At each prop, a marker bubble opens its section. A rail on the right shows the stops.
+- **The scroll tour:** each scroll moves the camera one stop: in from the city to the stick figure, around the island to each prop, then out to a high view of New York. At each prop, a marker badge opens its section. A rail on the right shows the stops.
 - **Content:** the nav at the top opens the work, about and contact dialogs. 5 seconds after the island appears, the nav and the hero card fold into small game-style capsules. Hover, focus or a tap opens them again.
 
 ## Run it
