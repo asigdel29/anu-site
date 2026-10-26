@@ -267,6 +267,7 @@ function createTraffic(uniforms, traffic) {
     fragmentShader: commonShader + trafficFragment,
   });
   const mesh = new Mesh(geometry, material);
+  // The shader drives every car, so the box's own bounds say nothing useful.
   mesh.frustumCulled = false;
   return mesh;
 }
@@ -445,8 +446,8 @@ function lightenWithoutGpu(group) {
 
 /**
  * Builds the city group off the main thread. The returned material is the buildings'; its
- * uniforms (uMixRatio, uTime, uSky, uHaze, uMotion) are shared with the ground, the trees and
- * the lights, so one update sets them all.
+ * uniforms (uMixRatio, uTime, uSky, uHaze, uMotion) are shared with every other city part, so one
+ * update sets them all.
  */
 export async function createSkyline() {
   const uniforms = {
