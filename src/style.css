@@ -708,7 +708,7 @@ a {
 }
 
 /*
- * The face in a folded capsule floats gently, like a marker on a toy map. The capsule itself
+ * The face in a folded capsule floats gently, like a waypoint in a game. The capsule itself
  * stays still, so it is an easy, stable target for a pointer.
  */
 .is-collapsed .island-face {
