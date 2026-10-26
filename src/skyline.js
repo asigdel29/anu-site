@@ -168,6 +168,8 @@ function treeGeometry() {
   const trunk = new CylinderGeometry(0.09, 0.14, 0.9, 5, 1, true).translate(0, 0.45, 0).deleteAttribute("uv");
   const lobes = TREE_LOBES.map(lobeGeometry);
   const geometry = mergeGeometries([trunk, ...lobes]);
+  // The trunk and the core lobe come first, so a draw range of this many indices draws just them.
+  geometry.userData.coreIndices = trunk.getIndex().count + lobes[0].getIndex().count;
   const bottom = Math.min(...TREE_LOBES.map(([, y, , radius]) => y - radius));
   const top = Math.max(...TREE_LOBES.map(([, y, , radius]) => y + radius));
   const [, coreY] = TREE_LOBES[0];
@@ -417,6 +419,31 @@ function createGround(uniforms) {
 }
 
 /**
+ * True when WebGL draws in software, without a GPU: in CI, or when the browser blocks the GPU.
+ * Software WebGL pays for every triangle on the CPU, seen or not, so the city draws less there.
+ */
+function drawsInSoftware(gl) {
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  return /swiftshader|llvmpipe|software/i.test(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+}
+
+/**
+ * Lightens the city when WebGL draws in software: the trees draw only their trunk and core lobe,
+ * and the water towers stay hidden. The check needs the renderer, so it runs once, at the trees'
+ * first draw (during the warm-up, before the towers' turn).
+ */
+function lightenWithoutGpu(group) {
+  const trees = group.getObjectByName("city trees");
+  const towers = group.getObjectByName("city water towers");
+  trees.onBeforeRender = (renderer) => {
+    trees.onBeforeRender = () => {};
+    if (!drawsInSoftware(renderer.getContext())) return;
+    trees.geometry.setDrawRange(0, trees.geometry.userData.coreIndices);
+    towers.visible = false;
+  };
+}
+
+/**
  * Builds the city group off the main thread. The returned material is the buildings'; its
  * uniforms (uMixRatio, uTime, uSky, uHaze, uMotion) are shared with the ground, the trees and
  * the lights, so one update sets them all.
@@ -452,6 +479,7 @@ export async function createSkyline() {
     part.name = `city ${name}`;
     group.add(part);
   }
+  lightenWithoutGpu(group);
   group.rotation.y = CITY_HEADING;
   return { group, material: buildings.material };
 }
