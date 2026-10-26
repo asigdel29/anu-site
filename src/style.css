@@ -1,46 +1,49 @@
 /* Styles for anu's island. Plain CSS; theme colours switch with body.light-theme / .dark-theme. */
 
 /*
- * Shared toy tokens. --spring is the bouncy ease for pop-ins and hovers. The --marker-* values
- * are the glossy badges of the toy map (for the tour markers): a candy gradient, a white rim, and
- * a drop shadow with a gloss on top. --button-pink is a deeper candy pink, so white text on it
- * passes 4.5:1. --accent-ink is the text on the --accent pink of either theme.
+ * Shared game-menu tokens. --spring is the snappy ease with overshoot for pop-ins, hovers and
+ * presses. --slant leans panels and buttons into parallelograms. --panel is the electric blue to
+ * violet of every panel; white, --gold and --cyan text on it pass 4.5:1. --rim, --bevel and --drop
+ * give a panel its white edge, its gloss and dark lower lip, and its hard shadow. --ink-dark
+ * outlines display text and is the text colour on --button-gold. The --marker-* values are the
+ * glossy badges of the tour markers.
  */
 :root {
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --font-display: "Fredoka", system-ui, sans-serif;
+  --font-display: "Anton SC", Impact, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
+  --slant: -8deg;
+  --gold: #ffd60a;
+  --cyan: #3be8ff;
+  --ink-dark: #120c3a;
+  --panel: linear-gradient(160deg, #1f45e0, #4b2edb 55%, #5a24d8);
+  --rim: inset 0 0 0 3px #fff;
+  --bevel: inset 0 6px 0 rgba(255, 255, 255, 0.22), inset 0 -8px 0 rgba(18, 12, 58, 0.3);
+  --drop: 0 5px 0 var(--ink-dark), 0 12px 26px rgba(18, 12, 58, 0.35);
+  --button-gold: linear-gradient(180deg, #ffe55c, #ffc800 55%, #ffab00);
+  --text-outline: 0 2px 0 var(--ink-dark);
   --marker-pink: linear-gradient(180deg, #ff6b8b, #e8325a);
   --marker-purple: linear-gradient(180deg, #c47bff, #8e44e8);
-  --marker-blue: linear-gradient(180deg, #6ea8ff, #7b5cff);
   --marker-teal: linear-gradient(180deg, #45d6b4, #12a889);
   --marker-orange: linear-gradient(180deg, #ff8a50, #f0442e);
   --marker-rim: #fff;
   --marker-shadow: 0 6px 14px rgba(46, 50, 80, 0.28), inset 0 2px 4px rgba(255, 255, 255, 0.45),
     inset 0 -3px 6px rgba(46, 50, 80, 0.16);
-  --button-pink: linear-gradient(180deg, #ee3f77, #c2175a);
-  --accent-ink: #2e3250;
 }
 
 .light-theme {
   --ink: #2e3250;
-  --paper: #fff;
   --accent: #ff6fae;
-  --focus: #6a3fe0;
   --muted: #575d7f;
-  --hairline: rgba(46, 50, 80, 0.1);
   --chip: rgba(46, 50, 80, 0.07);
-  --overlay: rgba(46, 155, 230, 0.2);
+  --overlay: rgba(18, 12, 58, 0.3);
 }
 .dark-theme {
   --ink: #f6f2ff;
-  --paper: #2a2160;
   --accent: #ff8fc0;
-  --focus: #ffd34d;
   --muted: #bdb3e6;
-  --hairline: rgba(255, 255, 255, 0.14);
   --chip: rgba(255, 255, 255, 0.1);
-  --overlay: rgba(14, 9, 40, 0.5);
+  --overlay: rgba(10, 6, 34, 0.55);
 }
 
 *,
@@ -74,13 +77,13 @@ button {
 
 a {
   color: inherit;
-  text-decoration-color: var(--accent);
+  text-decoration-color: var(--gold);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
 
 :focus-visible {
-  outline: 3px solid var(--focus);
+  outline: 3px solid var(--gold);
   outline-offset: 3px;
 }
 
@@ -99,11 +102,12 @@ a {
   height: 100%;
 }
 
-/* A springy pop from small to full size; the overshoot comes from --spring. */
+/* A springy pop from small to full size; the overshoot comes from --spring. It animates scale, not
+   transform, so it keeps the slant of a slanted button. */
 @keyframes pop-in {
   from {
     opacity: 0;
-    transform: scale(0.6);
+    scale: 0.6;
   }
 }
 
@@ -115,15 +119,19 @@ a {
     animation-delay: 0s !important;
     transition-duration: 1ms !important;
   }
-  /* Endless loops (the balls, the floating capsule faces, the markers) stop instead of flickering at 1 ms. */
-  .loading-screen::before,
+  /* Endless loops (the loading stripes, the floating capsule faces, the markers, the hint) stop
+     instead of flickering at 1 ms. */
+  .loading-screen-button::before,
   .is-collapsed .island-face,
   .marker-bubble,
   .scroll-ball {
     animation: none !important;
   }
 }
-/* Loading screen: a bright toy sky with a bouncing glossy ball; it fades away after "enter". */
+/*
+ * Loading screen: a game title screen. Still light rays fan out from behind the title over a deep
+ * blue to violet glow, and a vignette darkens the corners. It fades away after "enter".
+ */
 .loading-screen {
   position: fixed;
   inset: 0;
@@ -132,38 +140,12 @@ a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  color: #2e3250;
-  background: linear-gradient(#c5eefc, #8ddcf8 55%, #5bc8f5);
-}
-
-/* The glossy pink ball of the toy map, bouncing while the city loads. */
-.loading-screen::before {
-  content: "";
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 34% 28%, #fff 0 7%, #ff9cc4 18%, #f06292 52%, #c2185b);
-  box-shadow: 0 10px 18px rgba(46, 50, 80, 0.22);
-  transform-origin: 50% 100%;
-  animation: ball-bounce 1.1s infinite;
-}
-
-/* Falls, squashes on the ground, then springs back up. */
-@keyframes ball-bounce {
-  0%,
-  100% {
-    transform: translateY(0) scale(1.14, 0.86);
-    animation-timing-function: ease-out;
-  }
-  15%,
-  85% {
-    transform: translateY(-8px) scale(0.95, 1.06);
-  }
-  50% {
-    transform: translateY(-42px) scale(1);
-    animation-timing-function: ease-in;
-  }
+  gap: 24px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 50% 40%, transparent 30%, rgba(18, 12, 58, 0.55)),
+    repeating-conic-gradient(from 0deg at 50% 40%, rgba(255, 255, 255, 0.07) 0 5deg, transparent 6deg 11deg, rgba(255, 255, 255, 0.07) 12deg),
+    radial-gradient(circle at 50% 40%, #3d6dff, #2a35d8 38%, #3d16a6 72%, #1e0b5e);
 }
 
 .loading-screen.is-leaving {
@@ -177,53 +159,88 @@ a {
   }
 }
 
+/* The title leans like a game logo and pops in; "of new york" sits on a gold tag under it. */
 .loading-title {
   font-family: var(--font-display);
-  font-size: clamp(2.4rem, 7vw, 4rem);
-  font-weight: 600;
-  line-height: 1.05;
+  font-size: clamp(3.6rem, 13vw, 7.5rem);
+  line-height: 0.9;
   text-align: center;
+  text-shadow: 0 5px 0 var(--ink-dark), 0 14px 30px rgba(18, 12, 58, 0.45);
+  transform: skewX(var(--slant));
+  animation: pop-in 0.7s var(--spring) both;
 }
 
 .loading-title span {
   display: block;
-  color: #575d7f;
+  width: max-content;
+  margin: 14px auto 0;
+  padding: 3px 18px 5px;
+  font-size: 0.3em;
+  letter-spacing: 0.08em;
+  color: var(--ink-dark);
+  text-shadow: none;
+  background: var(--button-gold);
+  border-radius: 4px;
+  box-shadow: 0 4px 0 var(--ink-dark);
 }
 
 .loading-text {
   font-size: 0.95rem;
-  color: #575d7f;
+  text-shadow: 0 1px 0 var(--ink-dark);
 }
 
+/* A chunky slanted button. While the city loads it is a dark bar with sliding stripes; once ready
+   it pops in as a gold "enter" button. Hover and press use translate and scale, so the slant stays. */
 .loading-screen-button {
-  padding: 12px 30px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #575d7f;
-  background: rgba(255, 255, 255, 0.5);
-  border: 3px solid rgba(255, 255, 255, 0.85);
-  border-radius: 999px;
-  transition: transform 0.4s var(--spring);
-}
-
-.is-ready .loading-screen-button:enabled {
+  position: relative;
+  overflow: hidden;
+  min-width: 240px;
+  padding: 10px 40px 12px;
+  font-size: 2rem;
+  letter-spacing: 0.05em;
   color: #fff;
-  background: var(--button-pink);
-  border-color: var(--marker-rim);
-  box-shadow: var(--marker-shadow);
-  animation: pop-in 0.6s var(--spring);
+  text-shadow: var(--text-outline);
+  background: rgba(18, 12, 58, 0.5);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.4), 0 5px 0 var(--ink-dark);
+  transform: skewX(var(--slant));
+  transition: translate 0.35s var(--spring), scale 0.35s var(--spring);
 }
 
-.loading-screen-button:enabled:active {
-  transform: scale(0.95);
+/* The stripes: one stripe period wider than the button, so the slide loops without a jump. */
+.loading-screen:not(.is-ready) .loading-screen-button::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 -28px;
+  z-index: -1;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.14) 0 14px, transparent 14px 28px);
+  animation: stripes 0.8s linear infinite;
+}
+
+@keyframes stripes {
+  to {
+    translate: 28px 0;
+  }
+}
+
+.is-ready .loading-screen-button {
+  color: var(--ink-dark);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: var(--button-gold);
+  box-shadow: var(--rim), inset 0 -6px 0 rgba(160, 70, 0, 0.3), 0 6px 0 var(--ink-dark),
+    0 0 32px rgba(255, 214, 10, 0.45);
+  animation: pop-in 0.6s var(--spring);
 }
 
 .no-sound-button {
   font-family: var(--font-body);
   font-size: 0.9rem;
-  color: #575d7f;
+  font-weight: 600;
+  color: #fff;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration-color: var(--gold);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 .instructions {
@@ -232,7 +249,7 @@ a {
   width: 90%;
   font-size: 0.9rem;
   text-align: center;
-  color: #575d7f;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .mobile-instructions {
@@ -279,6 +296,7 @@ a {
   backdrop-filter: blur(6px);
 }
 
+/* A deep game panel with faint diagonal stripes, a thick white rim and a hard shadow. */
 .modal {
   position: fixed;
   top: 50%;
@@ -288,11 +306,12 @@ a {
   max-width: 960px;
   padding: 36px 40px;
   translate: -50% -50%;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--hairline);
-  border-radius: 32px;
-  box-shadow: rgba(30, 80, 150, 0.28) 0 30px 70px;
+  color: #fff;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0 16px, transparent 16px 32px),
+    linear-gradient(160deg, #1d3fd0, #3a22b5 55%, #47199f);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 4px #fff, var(--bevel), 0 8px 0 var(--ink-dark), 0 30px 70px rgba(18, 12, 58, 0.5);
 }
 
 .modal.about {
@@ -309,10 +328,17 @@ a {
   gap: 16px;
 }
 
+/* The title is a slanted gold tag, like the header of a game menu. */
 .modal-title {
-  font-size: 2.4rem;
-  font-weight: 600;
-  line-height: 1.1;
+  align-self: flex-start;
+  padding: 0 20px 2px;
+  font-size: 2.6rem;
+  line-height: 1.15;
+  color: var(--ink-dark);
+  background: var(--button-gold);
+  border-radius: 6px;
+  box-shadow: var(--rim), 0 5px 0 var(--ink-dark);
+  transform: skewX(var(--slant));
 }
 
 .modal-content {
@@ -323,18 +349,22 @@ a {
   font-size: 1rem;
   line-height: 1.6;
   overscroll-behavior: contain;
+  scrollbar-color: var(--gold) transparent;
 }
 
+/* A slanted white key; it lifts on hover and squashes when pressed. */
 .modal-exit-button {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 22px;
+  right: 22px;
   display: flex;
   padding: 9px;
-  color: var(--ink);
-  background: var(--chip);
-  border-radius: 50%;
-  transition: transform 0.45s var(--spring);
+  color: var(--ink-dark);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 0 var(--ink-dark);
+  transform: skewX(var(--slant));
+  transition: translate 0.35s var(--spring), scale 0.35s var(--spring);
 }
 
 .modal-exit-button svg {
@@ -344,89 +374,105 @@ a {
 
 @media (hover: hover) {
   .modal-exit-button:hover {
-    color: var(--accent-ink);
-    background: var(--accent);
-    transform: rotate(90deg) scale(1.08);
+    background: var(--gold);
+    translate: 0 -2px;
+    scale: 1.1;
   }
+}
+
+/* After the hover rule, so a press wins over hover. */
+.modal-exit-button:active {
+  scale: 0.9;
 }
 
 @media (max-width: 768px) {
   .modal {
     padding: 24px 20px;
-    border-radius: 26px;
   }
   .modal-title {
     font-size: 2rem;
   }
 }
-/* Dialog content: pastel work cards, lists and contact pills. */
+/* Dialog content: work cards in item-rarity colours, lists and slanted contact rows. */
 .work-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .work-card {
-  padding: 18px 20px;
-  background: var(--card, var(--chip));
-  border-radius: 20px;
-  transition: transform 0.45s var(--spring);
+  padding: 16px 18px 20px;
+  color: var(--card-ink, #fff);
+  background: var(--card);
+  border-radius: 10px;
+  box-shadow: var(--rim), var(--bevel), 0 5px 0 var(--ink-dark);
+  transition: translate 0.35s var(--spring), scale 0.35s var(--spring);
 }
 
-/* By day each card takes a pastel of the toy map: sand, pink, lilac, mint, sky and peach. */
-.light-theme .work-card:nth-child(6n + 1) {
-  --card: #fff3dc;
+/* Rarity colours in turn: gold, purple, blue, teal, magenta and green. Text on each passes 4.5:1. */
+.work-card:nth-child(6n + 1) {
+  --card: linear-gradient(160deg, #ffe55c, #ffc53d 50%, #ffab00);
+  --card-ink: var(--ink-dark);
 }
-.light-theme .work-card:nth-child(6n + 2) {
-  --card: #ffe5ef;
+.work-card:nth-child(6n + 2) {
+  --card: linear-gradient(160deg, #7b3fe4, #5a1fc4);
 }
-.light-theme .work-card:nth-child(6n + 3) {
-  --card: #eee7fd;
+.work-card:nth-child(6n + 3) {
+  --card: linear-gradient(160deg, #2b63e8, #1d3fb8);
 }
-.light-theme .work-card:nth-child(6n + 4) {
-  --card: #e2f6e8;
+.work-card:nth-child(6n + 4) {
+  --card: linear-gradient(160deg, #0b7a73, #075e59);
 }
-.light-theme .work-card:nth-child(6n + 5) {
-  --card: #e0f3fd;
+.work-card:nth-child(6n + 5) {
+  --card: linear-gradient(160deg, #c2187a, #8f0f5a);
 }
-.light-theme .work-card:nth-child(6n + 6) {
-  --card: #ffe9db;
+.work-card:nth-child(6n + 6) {
+  --card: linear-gradient(160deg, #15803d, #0f5e2d);
 }
 
 .work-card h3 {
   margin-bottom: 6px;
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.45rem;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
 }
 
-.work-card p,
+.work-card a {
+  text-decoration-color: currentColor;
+}
+
 .small-text,
 .sign-off {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .tag {
+  display: inline-block;
   margin-left: 6px;
-  padding: 1px 9px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 1px 8px 2px;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
   vertical-align: middle;
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-radius: 999px;
+  color: var(--gold);
+  background: var(--ink-dark);
+  border-radius: 4px;
+  transform: skewX(var(--slant));
 }
 
 .section-header {
   margin: 28px 0 8px;
-  font-size: 1.35rem;
-  font-weight: 600;
+  font-size: 1.7rem;
+  letter-spacing: 0.03em;
+  color: var(--gold);
+  text-shadow: var(--text-outline);
 }
 
 .headline {
   margin-bottom: 12px;
   font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 600;
+  font-size: 1.7rem;
+  line-height: 1.1;
+  text-shadow: var(--text-outline);
 }
 
 .plain-list {
@@ -438,7 +484,7 @@ a {
 }
 
 .plain-list li::marker {
-  color: var(--accent);
+  color: var(--cyan);
 }
 
 .small-text,
@@ -449,7 +495,7 @@ a {
 .contact-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   list-style: none;
 }
 
@@ -457,12 +503,15 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 10px 18px;
   font-weight: 600;
   text-decoration: none;
-  background: var(--chip);
-  border-radius: 999px;
-  transition: transform 0.4s var(--spring);
+  transition: translate 0.35s var(--spring), scale 0.35s var(--spring);
+}
+
+.contact-link::before {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
 .contact-link svg {
@@ -478,20 +527,26 @@ a {
 
 @media (hover: hover) {
   .work-card:hover {
-    transform: translateY(-4px) rotate(-0.6deg);
+    translate: 0 -4px;
+    scale: 1.02;
   }
   .contact-link:hover {
-    color: var(--accent-ink);
-    background: var(--accent);
-    transform: translateY(-2px) scale(1.02);
+    color: var(--ink-dark);
+    translate: 0 -2px;
+  }
+  .contact-link:hover::before {
+    background: var(--button-gold);
+    box-shadow: inset 0 0 0 2px #fff, 0 4px 0 var(--ink-dark);
   }
 }
-/* Self-hosted OFL fonts: Fredoka (one variable-weight file) for headings, buttons and display text, and
-   Inter for body text. */
+/* Self-hosted OFL fonts: Anton SC for headings, buttons and labels, and Inter for body text. Anton SC
+   draws lowercase as small capitals, so labels read as capitals while the page text (and so every
+   accessible name) stays lowercase. It has one weight, so the face covers every weight and the
+   browser never fakes a bold. */
 @font-face {
-  font-family: "Fredoka";
-  src: url("/fonts/fredoka-latin-wght-normal.woff2") format("woff2");
-  font-weight: 300 700;
+  font-family: "Anton SC";
+  src: url("/fonts/anton-sc-latin-400-normal.woff2") format("woff2");
+  font-weight: 100 900;
   font-display: swap;
 }
 @font-face {
@@ -546,23 +601,48 @@ a {
   }
 }
 
-/* Frosted glass for the nav, the hero card, the status chip and the weather toast, tinted to the
-   toy sky. */
+/* Frosted glass for the tour labels, the stop rail and the scroll hint, tinted to the toy sky. */
 .light-theme {
   --glass: rgba(255, 255, 255, 0.36);
   --glass-border: rgba(255, 255, 255, 0.8);
-  --glass-shine: rgba(255, 255, 255, 0.95);
   --glass-shadow: rgba(30, 110, 190, 0.22);
 }
 .dark-theme {
   --glass: rgba(42, 33, 96, 0.45);
   --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-shine: rgba(255, 255, 255, 0.22);
   --glass-shadow: rgba(10, 5, 35, 0.35);
 }
 
 /*
- * Docks: glass "dynamic islands". Each dock holds its island at the open size, so hovering the
+ * Slanted tiles: buttons, links and chips keep upright text and draw a leaning tile behind it in
+ * ::before. Each element sets the tile's colour; nav tiles stay hidden until hover.
+ */
+.pill-nav .island-body > button,
+.pill-link,
+.icon-button,
+.hero-link,
+.contact-link {
+  position: relative;
+  isolation: isolate;
+}
+
+.pill-nav .island-body > button::before,
+.pill-link::before,
+.icon-button::before,
+.hero-link::before,
+.contact-link::before,
+.sky-status::before,
+.weather-note::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 6px;
+  transform: skewX(var(--slant));
+}
+
+/*
+ * Docks: game-panel "dynamic islands". Each dock holds its island at the open size, so hovering the
  * place where the island was opens it again. src/dock.js measures the open size into --open-w and
  * --open-h (lengths animate, auto does not) and toggles .is-collapsed.
  */
@@ -582,23 +662,24 @@ a {
   }
 }
 
+/* The island is a slanted panel; its body and face lean back the other way, so text stays upright. */
 .island {
   pointer-events: auto;
   position: absolute;
   overflow: hidden;
   width: var(--open-w);
   height: var(--open-h);
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
+  color: #fff;
+  background: var(--panel);
   border-radius: var(--open-radius);
-  box-shadow: var(--glass-shadow) 0 12px 32px, inset 0 1px 0 var(--glass-shine);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  transition: width 0.6s var(--spring), height 0.6s var(--spring), border-radius 0.6s var(--spring);
+  box-shadow: var(--rim), var(--bevel), var(--drop);
+  transform: skewX(var(--slant));
+  transition: width 0.6s var(--spring), height 0.6s var(--spring);
 }
 
 .island-body {
   position: absolute;
+  transform: skewX(calc(-1 * var(--slant)));
   transition: opacity 0.3s 0.12s, filter 0.3s 0.12s, scale 0.45s var(--spring);
 }
 
@@ -609,13 +690,13 @@ a {
   place-items: center;
   opacity: 0;
   pointer-events: none;
+  transform: skewX(calc(-1 * var(--slant)));
   transition: opacity 0.2s;
 }
 
 .is-collapsed .island {
   width: var(--closed-w);
   height: var(--closed-h);
-  border-radius: 999px;
 }
 
 .is-collapsed .island-body {
@@ -627,7 +708,7 @@ a {
 }
 
 /*
- * The face in a folded capsule floats gently, like a marker on a toy map. The capsule itself
+ * The face in a folded capsule floats gently, like a waypoint in a game. The capsule itself
  * stays still, so it is an easy, stable target for a pointer.
  */
 .is-collapsed .island-face {
@@ -636,18 +717,18 @@ a {
   animation: float 3.6s ease-in-out infinite;
 }
 
-/* A slow bob up and back; transform only, so it runs off the main thread. */
+/* A slow bob up and back; translate only (the face's transform holds its slant), off the main thread. */
 @keyframes float {
   50% {
-    transform: translateY(-3px);
+    translate: 0 -3px;
   }
 }
 
 /* Nav dock, top centre: logo, sections, sound and night icons, and the call to action. */
 .dock-nav {
-  --open-radius: 24px;
+  --open-radius: 10px;
   --closed-w: 92px;
-  --closed-h: 36px;
+  --closed-h: 40px;
   top: 16px;
   left: 50%;
   /* The hover zone also covers the strip under the nav, where the masthead was. */
@@ -666,35 +747,53 @@ a {
   display: flex;
   width: max-content;
   align-items: center;
-  gap: 4px;
-  padding: 6px;
+  gap: 2px;
+  padding: 7px 12px;
   font-family: var(--font-display);
 }
 
+/* In the folded capsule, the blossom sits on a small white key, like the logo in the open nav. */
 .pill-nav .island-face svg {
+  box-sizing: content-box;
   width: 16px;
   height: 16px;
+  padding: 4px;
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 2px 0 var(--ink-dark);
 }
 
 .pill-nav .island-body > button,
 .pill-link {
-  padding: 8px 14px;
+  padding: 7px 13px 8px;
   white-space: nowrap;
   font-family: inherit;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--ink);
+  font-size: 1.35rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #fff;
   text-decoration: none;
-  border-radius: 999px;
-  transition: transform 0.4s var(--spring);
+  text-shadow: var(--text-outline);
+  transition: translate 0.35s var(--spring), scale 0.35s var(--spring);
+}
+
+/* Nav tiles: a light tile that shows on hover. */
+.pill-nav .island-body > button::before,
+.pill-link::before,
+.icon-button::before {
+  background: rgba(255, 255, 255, 0.18);
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 
 .pill-logo {
   display: flex;
-  padding: 7px;
+  margin-right: 6px;
+  padding: 6px;
   background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(46, 50, 80, 0.14);
+  border-radius: 6px;
+  box-shadow: 0 3px 0 var(--ink-dark);
+  transform: skewX(var(--slant));
 }
 
 .pill-logo svg {
@@ -709,34 +808,37 @@ a {
 .icon-button {
   display: flex;
   padding: 8px;
-  color: var(--ink);
-  border-radius: 50%;
-  transition: transform 0.4s var(--spring);
+  color: #fff;
+  filter: drop-shadow(0 2px 0 var(--ink-dark));
+  transition: translate 0.35s var(--spring), scale 0.35s var(--spring);
 }
 
 .icon-button svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
 }
 
-/* The call to action is a glossy candy badge with a white rim. */
+/* The call to action is a gold slanted button with a white rim, like a game's "play" button. */
 .pill-nav .island-body > .pill-cta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 4px;
-  padding: 7px 10px 7px 16px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--button-pink);
-  border: 2px solid var(--marker-rim);
-  box-shadow: var(--marker-shadow);
+  margin-left: 8px;
+  padding: 7px 12px 8px 18px;
+  color: var(--ink-dark);
+  text-shadow: none;
+}
+
+.pill-nav .island-body > .pill-cta::before {
+  background: var(--button-gold);
+  box-shadow: inset 0 0 0 2px #fff, inset 0 -4px 0 rgba(160, 70, 0, 0.3), 0 3px 0 var(--ink-dark);
+  opacity: 1;
 }
 
 .pill-cta svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 /* Icons follow state: no script swaps them. */
@@ -751,62 +853,72 @@ a {
   display: block;
 }
 
-/* Buttons squish when pressed. */
-.pill-nav .island-body > button:active,
-.icon-button:active,
-.hero-link:active {
-  transform: scale(0.94);
-}
-
-/* Touch screens keep :hover after a tap, so only real pointers get the hover bounce. */
+/* Touch screens keep :hover after a tap, so only real pointers get the hover lift. */
 @media (hover: hover) {
   .pill-nav .island-body > button:hover,
   .pill-link:hover,
-  .icon-button:hover {
-    background: var(--chip);
-    transform: translateY(-2px) scale(1.06);
-  }
-  .pill-nav .island-body > .pill-cta:hover {
-    background: var(--button-pink);
-    filter: brightness(1.08) saturate(1.1);
-  }
-  .is-ready .loading-screen-button:enabled:hover,
+  .icon-button:hover,
+  .loading-screen-button:enabled:hover,
   .hero-link:hover {
-    transform: translateY(-3px) scale(1.05);
+    translate: 0 -2px;
+  }
+  .pill-nav .island-body > button:hover::before,
+  .pill-link:hover::before,
+  .icon-button:hover::before {
+    opacity: 1;
+  }
+  .pill-cta:hover,
+  .loading-screen-button:enabled:hover,
+  .hero-link:hover {
+    filter: brightness(1.08);
+    scale: 1.05;
   }
 }
 
-/* New York time and weather, top right, on a small glass chip. */
+/* Buttons squash when pressed and spring back on release. These come after the hover rules, so a
+   press wins over hover. */
+.pill-nav .island-body > button:active,
+.icon-button:active,
+.hero-link:active,
+.loading-screen-button:enabled:active {
+  scale: 1.05 0.9;
+}
+
+/* New York time and weather, top right, on a small slanted panel like a game HUD. */
 .sky-status {
   position: fixed;
-  top: 24px;
-  right: 20px;
+  top: 22px;
+  right: 24px;
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  font-size: 0.85rem;
-  color: var(--ink);
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  box-shadow: var(--glass-shadow) 0 8px 22px;
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  gap: 7px;
+  padding: 8px 16px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: #fff;
+  text-shadow: var(--text-outline);
+}
+
+.sky-status::before {
+  background: var(--panel);
+  box-shadow: var(--rim), var(--drop);
 }
 
 .sky-status svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
+  color: var(--cyan);
 }
 
-.status-place,
-.status-weather {
-  color: var(--muted);
+.status-place {
+  color: var(--gold);
 }
 
-/* A one-time glass toast that the weather is live; it pops in with a spring and shrinks away. */
+/* A one-time toast that the weather is live, on a slanted panel; it pops in with a spring and
+   shrinks away. */
 .weather-note {
   position: fixed;
   right: 24px;
@@ -814,19 +926,19 @@ a {
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   max-width: min(440px, calc(100vw - 32px));
-  padding: 10px 20px 10px 10px;
+  padding: 10px 24px 10px 14px;
   font-size: 0.9rem;
-  color: var(--ink);
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 26px;
-  box-shadow: var(--glass-shadow) 0 12px 32px, inset 0 1px 0 var(--glass-shine);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  color: #fff;
   transform-origin: 100% 100%;
   transition: opacity 0.3s, scale 0.55s var(--spring), display 0.55s allow-discrete;
+}
+
+.weather-note::before {
+  background: var(--panel);
+  border-radius: 10px;
+  box-shadow: var(--rim), var(--bevel), var(--drop);
 }
 
 .weather-note[hidden] {
@@ -842,18 +954,18 @@ a {
   }
 }
 
-/* The cloud icon sits in a glossy blue badge, like a marker on the toy map. */
+/* The cloud icon sits on a small gold key. */
 .weather-note svg {
   flex: none;
   box-sizing: content-box;
   width: 18px;
   height: 18px;
   padding: 7px;
-  color: #fff;
-  background: var(--marker-blue);
-  border: 2px solid var(--marker-rim);
-  border-radius: 50%;
-  box-shadow: var(--marker-shadow);
+  color: var(--ink-dark);
+  background: var(--button-gold);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #fff, 0 3px 0 var(--ink-dark);
+  transform: skewX(var(--slant));
 }
 
 @media (max-width: 768px) {
@@ -865,21 +977,22 @@ a {
     top: 12px;
   }
   .pill-nav .island-body {
-    gap: 2px;
-    padding: 4px;
+    gap: 0;
+    padding: 6px 10px;
   }
   .pill-nav .island-body > button {
-    padding: 8px 10px;
-    font-size: 0.95rem;
+    padding: 7px 9px 8px;
+    font-size: 1.2rem;
   }
   .pill-nav .island-body > .pill-cta {
-    padding: 7px 8px 7px 12px;
+    margin-left: 4px;
+    padding: 7px 9px 8px 13px;
   }
   .sky-status {
-    top: 66px;
+    top: 74px;
     right: 50%;
     translate: 50% 0;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     white-space: nowrap;
   }
   .weather-note {
@@ -898,11 +1011,13 @@ a {
   white-space: nowrap;
 }
 
-/* Hero dock, bottom left: it folds into a small "hi" bubble. */
+/* Hero dock, bottom left: it folds into a small "hi" badge. The card is tall, so it leans less, and
+   it leans from its bottom-left corner, which stays in place while it folds. */
 .dock-hero {
-  --open-radius: 28px;
-  --closed-w: 48px;
-  --closed-h: 48px;
+  --slant: -5deg;
+  --open-radius: 12px;
+  --closed-w: 54px;
+  --closed-h: 54px;
   left: 20px;
   bottom: 20px;
 }
@@ -918,45 +1033,57 @@ a {
   left: 0;
 }
 
+.dock-hero .island,
+.dock-hero .island-body,
+.dock-hero .island-face {
+  transform-origin: 0 100%;
+}
+
 .hero-card .island-body {
   width: min(460px, calc(100vw - 40px));
-  padding: 28px 32px;
+  padding: 26px 32px 30px;
 }
 
 .hero-card .island-face {
   font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.7rem;
+  color: var(--gold);
+  text-shadow: var(--text-outline);
 }
 
 .hero-headline {
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.15;
+  font-size: 2.2rem;
+  line-height: 1;
+  text-shadow: 0 3px 0 var(--ink-dark);
 }
 
 .hero-card p {
-  margin: 14px 0 18px;
+  margin: 12px 0 18px;
   font-size: 0.95rem;
   line-height: 1.5;
 }
 
+/* "Get to know me" is a gold slanted button, like the call to action in the nav. */
 .hero-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px 9px 18px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  background: var(--chip);
-  border-radius: 999px;
-  transition: transform 0.4s var(--spring);
+  padding: 8px 12px 9px 18px;
+  font-size: 1.3rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--ink-dark);
+  transition: translate 0.35s var(--spring), scale 0.35s var(--spring);
+}
+
+.hero-link::before {
+  background: var(--button-gold);
+  box-shadow: inset 0 0 0 2px #fff, inset 0 -4px 0 rgba(160, 70, 0, 0.3), 0 4px 0 var(--ink-dark);
 }
 
 .hero-link svg {
   width: 18px;
   height: 18px;
-  color: var(--accent);
 }
 
 @media (max-width: 768px) {
@@ -966,10 +1093,10 @@ a {
   }
   .hero-card .island-body {
     width: calc(100vw - 24px);
-    padding: 18px 20px;
+    padding: 18px 22px 22px;
   }
   .hero-headline {
-    font-size: 1.4rem;
+    font-size: 1.65rem;
   }
   .hero-card p {
     display: none;
@@ -979,7 +1106,7 @@ a {
   }
   /* Above the hero card, clear of the title. */
   .weather-note {
-    bottom: 168px;
+    bottom: 196px;
   }
 }
 

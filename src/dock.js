@@ -1,4 +1,4 @@
-// Glass "dynamic island" docks: the nav and the hero card fold into small capsules a few seconds
+// Game-panel "dynamic island" docks: the nav and the hero card fold into small capsules a few seconds
 // after the island appears, and open again on hover, keyboard focus or a tap.
 
 /** How long the docks stay open after the island appears, and after a tap on a capsule. */

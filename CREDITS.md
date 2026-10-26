@@ -5,7 +5,7 @@ Every third-party asset on the site, with its license. Add a row for each new as
 | Asset | Source | License | Used for |
 |---|---|---|---|
 | Room folio code | [Andrew Woan](https://github.com/andrewwoan/sooahs-room-folio) | MIT | Starting point for the scene, loading and modal code |
-| Fredoka | [The Fredoka Project Authors](https://github.com/hafontia/Fredoka-One) | SIL OFL 1.1 | Headings, buttons and display text |
+| Anton SC | [The Anton Project Authors](https://github.com/googlefonts/AntonFont) | SIL OFL 1.1 | Headings, buttons and labels |
 | Inter | [The Inter Project Authors](https://github.com/rsms/inter) | SIL OFL 1.1 | Body text |
 | Brand icons (GitHub, LinkedIn, X, Substack) | [Simple Icons](https://simpleicons.org) | CC0 1.0 | Contact links |
 | UI icons (mail, sun, moon, sound, close) | [Lucide](https://lucide.dev) | ISC | Toggles and buttons |
