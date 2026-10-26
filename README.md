@@ -83,7 +83,7 @@ To add a stop:
 - Three bridges cross the East River: the Brooklyn Bridge with its granite gothic towers and diagonal cable web, the blue Manhattan Bridge and the red Williamsburg Bridge. `BRIDGES` in `src/city.js` holds them, and the lots under their ramps stay empty. At night their cables wear a string of lights. All three are one draw call.
 - A neat row of trees lines the park's wall on all four sides. A jittered grid of trees fills the rest.
 - Each park tree is a trunk under four round canopy lobes. Each lobe has only 14 faces, so the park stays cheap to draw. The canopy is dark at its core and bright at its top. The trees sway in the wind, but not when the visitor asks for less motion.
-- Without a GPU (software WebGL, as in CI), the trees draw only their trunk and core lobe and the water towers stay hidden. Software WebGL pays for every triangle on the CPU, so this keeps the page usable there.
+- Without a GPU (software WebGL, as in CI), the trees draw only their trunk and core lobe, and the water towers and the cars stay hidden. Software WebGL pays for every triangle on the CPU, so this keeps the page usable there.
 
 To add a landmark:
 
