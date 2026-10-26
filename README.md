@@ -79,6 +79,7 @@ To add a stop:
 - The streets have asphalt roadways, sidewalks, lane dashes and crosswalks. The water has a foam line along each shore and glints in the sun.
 - Many mid-rise roofs carry a wooden water tower on steel legs. The worker places them from the layout: one on each chosen roof, in a corner, clear of the rooftop box. All the towers are one draw call.
 - Yellow taxis and other cars drive one way along the avenues and streets near the island. The vertex shader moves them from the clock, so the main thread does no work for them. Each lane stops short of the park and the rivers. At night the cars show white headlights and red tail lights. When the visitor asks for less motion, they stand still.
+- Three bridges cross the East River: the Brooklyn Bridge with its granite gothic towers and diagonal cable web, the blue Manhattan Bridge and the red Williamsburg Bridge. `BRIDGES` in `src/city.js` holds them, and the lots under their ramps stay empty. At night their cables wear a string of lights. All three are one draw call.
 - Each park tree is a trunk under four round canopy lobes. Each lobe has only 14 faces, so the park stays cheap to draw. The canopy is dark at its core and bright at its top. The trees sway in the wind, but not when the visitor asks for less motion.
 
 To add a landmark:

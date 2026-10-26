@@ -331,6 +331,49 @@ export function layoutWaterTowers(buildings, seed = 1880) {
   return new Float32Array(towers);
 }
 
+/**
+ * The East River bridges inside the modelled area, each straight across the river along x from
+ * Manhattan to Brooklyn. z is where it crosses, placed by its real latitude against the
+ * Woolworth Building's; deck and towers are heights above the street in metres (real heights
+ * divided by 10, a little chunkier); width is the deck's width. Stone towers are the Brooklyn
+ * Bridge's gothic granite; steel towers are the Manhattan and Williamsburg Bridges'.
+ */
+export const BRIDGES = [
+  { name: "Williamsburg", z: 387, deck: 4.5, towers: 10, width: 3.2, stone: false },
+  { name: "Manhattan", z: 422, deck: 4.5, towers: 10, width: 3.2, stone: false },
+  { name: "Brooklyn", z: 448, deck: 4.2, towers: 9, width: 2.8, stone: true },
+];
+
+/** How far each bridge's approach ramp runs over the land on either shore, in metres. */
+export const BRIDGE_RAMP = 10;
+
+/**
+ * Where a bridge meets the land and stands: its ends (x of the ramp feet), the two shores, and
+ * its two towers, each a fifth of the river in from a shore, as the real towers stand near the
+ * banks.
+ */
+export function bridgeSpan(bridge) {
+  const west = manhattanHalfWidth(bridge.z);
+  const east = BOROUGH_EDGE;
+  const river = east - west;
+  return {
+    start: west - BRIDGE_RAMP,
+    west,
+    towers: [west + river * 0.2, east - river * 0.2],
+    east,
+    end: east + BRIDGE_RAMP,
+  };
+}
+
+/** True when a lot stands where a bridge's deck or ramps would pass through it. */
+function underBridge(lot) {
+  return BRIDGES.some((bridge) => {
+    const { start, end } = bridgeSpan(bridge);
+    const clear = bridge.width / 2 + 1;
+    return lot.x + lot.width / 2 > start && lot.x - lot.width / 2 < end && Math.abs(lot.z - bridge.z) < lot.depth / 2 + clear;
+  });
+}
+
 /** True when a lot's footprint overlaps a landmark's, so the landmark takes its place. */
 function underLandmark(lot) {
   return LANDMARKS.some(
@@ -341,8 +384,8 @@ function underLandmark(lot) {
 /**
  * Returns every building as a record: centre (x, z), footprint (width along x, depth along z),
  * base and height above the street, taper (top shrink, 0..1), seed, facade style, palette,
- * roof slant and night light. Landmarks replace the lots under them; the rest become tiers and
- * rooftop boxes.
+ * roof slant and night light. Landmarks replace the lots under them, bridge approaches clear
+ * theirs, and the rest become tiers and rooftop boxes.
  */
 export function layoutCity(seed = 1625) {
   const random = seeded(seed);
@@ -376,7 +419,7 @@ export function layoutCity(seed = 1625) {
     }
   }
   return buildings
-    .filter((lot) => !underLandmark(lot))
+    .filter((lot) => !underLandmark(lot) && !underBridge(lot))
     .flatMap((lot) => lotParts(lot, random))
     .concat(LANDMARKS);
 }
