@@ -8,6 +8,7 @@ import { startDocks } from "./dock.js";
 import { placeCamera, startTour, stepTour } from "./explore.js";
 import { revealIsland, waitForEnter } from "./loading.js";
 import { islandMaterial, loadIsland } from "./island.js";
+import { createPetals, fitPetalsToCanopy, setPetalWind } from "./petals.js";
 import { setBackgroundInert } from "./modals.js";
 import { prefersReducedMotion } from "./motion.js";
 import { createPrecipitation, setPrecipitation } from "./precipitation.js";
@@ -36,6 +37,7 @@ const sky = { day: SKY_COLORS.day.clone(), night: SKY_COLORS.night.clone() };
 
 /** Created once the renderer exists (it needs the pixel ratio). */
 let clouds;
+let petals;
 let precipitation;
 let skyline;
 let themedMaterials = [];
@@ -46,6 +48,7 @@ function onFrame(time, delta) {
   if (!prefersReducedMotion) {
     clouds.material.uniforms.uTime.value = time;
     precipitation.material.uniforms.uTime.value = time;
+    if (petals) petals.material.uniforms.uTime.value = time;
   }
   if (skyline) skyline.material.uniforms.uTime.value = time;
   if (stepTheme(delta)) {
@@ -64,6 +67,7 @@ function paintSky() {
 function applyWeather(weather, isFirst) {
   setCloudWeather(clouds, weather);
   setPrecipitation(precipitation, weather);
+  if (petals) setPetalWind(petals, weather);
   if (skyline) setSkylineWeather(skyline, weather);
   sky.day.lerpColors(SKY_COLORS.day, GLOOM_SKY.day, weather.gloom);
   sky.night.lerpColors(SKY_COLORS.night, GLOOM_SKY.night, weather.gloom);
@@ -89,6 +93,13 @@ async function boot() {
   themedMaterials = [islandMaterial, clouds.material, precipitation.material];
 
   const island = await loadIsland({ scene, camera, renderer, yieldToMain });
+  await yieldToMain("petals");
+  petals = createPetals(isMobile ? 160 : 420, renderer.getPixelRatio());
+  fitPetalsToCanopy(petals, island.getObjectByName("Canopy"));
+  scene.add(petals.points);
+  themedMaterials.push(petals.material);
+  // A first draw would compile the petal shader in one long task.
+  await renderer.compileAsync(petals.points, camera, scene);
   await yieldToMain("load island");
 
   skyline = await skylineRequest;
@@ -100,7 +111,7 @@ async function boot() {
 
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
-  await warmUp([...island.children, clouds.mesh, precipitation.points, ...skyline.group.children]);
+  await warmUp([...island.children, clouds.mesh, precipitation.points, petals.points, ...skyline.group.children]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
