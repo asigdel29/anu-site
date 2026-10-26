@@ -1,6 +1,6 @@
 // The New York around the island: every building from src/city.js in one instanced draw call,
-// Central Park's trees in another, red aviation lights on the tall tops, and the street-level
-// ground with the park and the rivers. All the city shaders share one set of uniforms, so day,
+// Central Park's trees in another, rooftop water towers in a third, red aviation lights on the
+// tall tops, and the street-level ground with the park and the rivers. All the city shaders share one set of uniforms, so day,
 // night and weather change them together.
 
 import {
@@ -9,7 +9,9 @@ import {
   BufferAttribute,
   BufferGeometry,
   CircleGeometry,
+  ConeGeometry,
   CylinderGeometry,
+  DoubleSide,
   Color,
   Group,
   IcosahedronGeometry,
@@ -18,6 +20,7 @@ import {
   InterleavedBuffer,
   InterleavedBufferAttribute,
   Mesh,
+  PlaneGeometry,
   Points,
   ShaderMaterial,
   Vector4,
@@ -38,6 +41,7 @@ import {
   PARK_WATER,
   STREET_SPACING,
   STREET_WIDTH,
+  TOWER_RADIUS,
   TREE_PALETTE,
   buildCityArrays,
 } from "./city.js";
@@ -51,6 +55,8 @@ import treeVertex from "./shaders/city/tree.vert?raw";
 import treeFragment from "./shaders/city/tree.frag?raw";
 import lightVertex from "./shaders/city/light.vert?raw";
 import lightFragment from "./shaders/city/light.frag?raw";
+import waterTowerVertex from "./shaders/city/water-tower.vert?raw";
+import waterTowerFragment from "./shaders/city/water-tower.frag?raw";
 
 /** Turns the city so Midtown (south, +z in city space) stands behind the island in the opening view. */
 const CITY_HEADING = Math.atan2(-18, -20.5);
@@ -76,9 +82,23 @@ function layoutInWorker() {
   });
 }
 
+/**
+ * A unit box with its base at y = 0 and no bottom face, which no camera sees: ten triangles per
+ * building instead of twelve, across thousands of buildings.
+ */
+function buildingGeometry() {
+  const box = new BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+  const bottom = box.groups[3];
+  const corners = Array.from(box.getIndex().array);
+  corners.splice(bottom.start, bottom.count);
+  box.setIndex(corners);
+  box.clearGroups();
+  return box;
+}
+
 /** Builds the instanced buildings: a unit box per record, placed and sized in the vertex shader. */
 function createBuildings(uniforms, { footprint, shape, look }) {
-  const geometry = new InstancedBufferGeometry().copy(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0));
+  const geometry = new InstancedBufferGeometry().copy(buildingGeometry());
   geometry.setAttribute("aFootprint", new InstancedBufferAttribute(footprint, 4));
   geometry.setAttribute("aShape", new InstancedBufferAttribute(shape, 4));
   geometry.setAttribute("aLook", new InstancedBufferAttribute(look, 4));
@@ -168,6 +188,52 @@ function createTrees(uniforms, trees) {
   return mesh;
 }
 
+/** Water tower proportions at size 1, in metres: leg height, tank height and roof height. */
+const TOWER = { legs: TOWER_RADIUS, tank: TOWER_RADIUS * 1.6, roof: TOWER_RADIUS * 0.55 };
+
+/**
+ * One water tower at size 1, in metres above its roof: four steel legs (part 0), each a thin
+ * strip facing out from the corner, an eight-sided wooden tank (part 1) and a conical roof
+ * (part 2). About 30 triangles, since software WebGL pays for every one, seen or not.
+ */
+function waterTowerGeometry() {
+  const legs = [0, 1, 2, 3].map((corner) => {
+    const angle = (corner * Math.PI) / 2 + Math.PI / 4;
+    const reach = TOWER_RADIUS * 0.75;
+    return new PlaneGeometry(0.07, TOWER.legs)
+      .rotateY(Math.PI / 2 - angle)
+      .translate(Math.cos(angle) * reach, TOWER.legs / 2, Math.sin(angle) * reach);
+  });
+  const tank = new CylinderGeometry(TOWER_RADIUS, TOWER_RADIUS, TOWER.tank, 8, 1, true).translate(0, TOWER.legs + TOWER.tank / 2, 0);
+  const roof = new ConeGeometry(TOWER_RADIUS * 1.1, TOWER.roof, 8, 1, true).translate(0, TOWER.legs + TOWER.tank + TOWER.roof / 2, 0);
+  const parts = [...legs, tank, roof];
+  const kinds = [0, 0, 0, 0, 1, 2];
+  for (const [index, part] of parts.entries()) {
+    part.deleteAttribute("uv");
+    part.setAttribute("aPart", new BufferAttribute(new Float32Array(part.getAttribute("position").count).fill(kinds[index]), 1));
+  }
+  return mergeGeometries(parts);
+}
+
+/** Builds the rooftop water towers: one instanced draw call, placed from the packed layout. */
+function createWaterTowers(uniforms, towers) {
+  const geometry = new InstancedBufferGeometry().copy(waterTowerGeometry());
+  geometry.setAttribute("aTower", new InstancedBufferAttribute(towers, 4));
+  geometry.instanceCount = towers.length / 4;
+  const material = new ShaderMaterial({
+    uniforms,
+    defines: { TANK: vec(TOWER.legs, TOWER.legs + TOWER.tank) },
+    vertexShader: waterTowerVertex,
+    fragmentShader: commonShader + waterTowerFragment,
+    // The legs are single strips, seen from both sides.
+    side: DoubleSide,
+  });
+  const mesh = new Mesh(geometry, material);
+  // The shader places every tower, so the geometry's own bounds say nothing useful.
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
 /** Builds the aviation lights: points read straight from the packed x, top, z, phase array. */
 function createLights(uniforms, lights) {
   const packed = new InterleavedBuffer(lights, 4);
@@ -230,7 +296,13 @@ export async function createSkyline() {
   const layout = await layoutInWorker();
   const buildings = createBuildings(uniforms, layout);
   const group = new Group();
-  group.add(createGround(uniforms), createTrees(uniforms, layout.trees), buildings, createLights(uniforms, layout.lights));
+  group.add(
+    createGround(uniforms),
+    createTrees(uniforms, layout.trees),
+    buildings,
+    createWaterTowers(uniforms, layout.towers),
+    createLights(uniforms, layout.lights)
+  );
   group.rotation.y = CITY_HEADING;
   return { group, material: buildings.material };
 }
