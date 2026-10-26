@@ -64,57 +64,72 @@ void main()
     float window = wall * (1.0 - crown - bare) * (1.0 - metal) * (1.0 - cornice - corniceShadow)
         * filteredPulse(grid.x, width.x, pane.x, pane.y) * filteredPulse(grid.y, width.y, pane.z, pane.w);
 
-    // Each window has its own on/off rhythm; far away, where a pixel spans many windows,
-    // the average takes over so nothing sparkles.
-    float face = dot(floor(normal.xz * 2.0 + 0.5), vec2(5.0, 17.0));
-    vec2 cell = floor(grid) + vec2(face, vShape.w * 311.0);
-    float occupancy = 0.2 + 0.3 * fract(vShape.w * 7.0);
-    float flip = floor(uTime / 23.0 + hash(cell) * 40.0);
-    float litCell = step(1.0 - occupancy, hash(cell + flip * 0.37));
     float detail = 1.0 - smoothstep(0.35, 1.0, max(width.x, width.y));
-    float lit = mix(occupancy * 0.8, litCell, detail);
     // Where the pixel falls inside its pane: 0 at the bottom left, 1 at the top right.
     vec2 inPane = clamp((fract(grid) - pane.xz) / (pane.yw - pane.xz), 0.0, 1.0);
     float paneRise = mix(0.5, inPane.y, detail);
-
-    // Soft cel light: a warm key on the faces toward the sun, a cool blue-purple shade on the rest,
-    // roofs a touch brighter, darker toward the street and brighter toward the top.
-    float sunSide = smoothstep(-0.02, 0.22, dot(normal, SUN));
-    vec3 light = mix(SHADE, SUN_COLOR, sunSide) * (1.0 + 0.1 * normal.y);
-    float rise = clamp(vFacade.y / max(top, 1.0), 0.0, 1.0);
-    float gradient = mix(0.84, 1.08, rise) * mix(0.72, 1.0, smoothstep(0.0, 3.0, vFacade.y));
-
-    // Glass: a deep teal tint low in each pane, the bright sky toward its top and at grazing angles,
-    // and a diagonal glint across some panes. Glass towers also brighten toward their tops.
-    vec3 sky = mix(uSky, vec3(1.0), 0.25);
-    float fresnel = pow(1.0 - max(dot(normal, toCamera), 0.0), 3.0);
-    vec3 tint = style == GLASS ? base : vec3(0.12, 0.33, 0.5);
-    float reflection = 0.1 + 0.5 * paneRise * paneRise + 0.3 * fresnel + (style == GLASS ? 0.2 * rise : 0.0);
-    float glint = (1.0 - smoothstep(0.1, 0.3, max(width.x, width.y))) * step(0.55, hash(cell + 7.0)) * (1.0 - smoothstep(0.05, 0.11, abs(inPane.x - inPane.y + 0.25)));
-    vec3 glass = mix(tint, sky, min(reflection, 0.9)) * mix(0.8, 1.0, sunSide) + 0.3 * glint;
-    vec3 day = mix(material * light, glass, window) * gradient;
-
-    // Rims: a bright line down each wall corner, warm on the sunny side and cool in the shade,
-    // fading out far away where whole buildings are only a few pixels wide.
+    // Each window has its own cell id, so its glint and its lamp stay with it.
+    float face = dot(floor(normal.xz * 2.0 + 0.5), vec2(5.0, 17.0));
+    vec2 cell = floor(grid) + vec2(face, vShape.w * 311.0);
+    // Rims: a bright line down each wall corner, fading out far away where whole buildings are
+    // only a few pixels wide.
     float edge = min(vFacade.x, vFacade.z - vFacade.x);
     float edgePixel = fwidth(edge);
     float rim = wall * (1.0 - smoothstep(0.0, max(0.12, 1.5 * edgePixel), edge)) * (1.0 - smoothstep(0.4, 0.9, edgePixel));
-    day = mix(day, mix(vec3(0.75, 0.82, 1.0), vec3(1.0, 0.95, 0.82), sunSide), rim * 0.45);
+    float glintDetail = 1.0 - smoothstep(0.1, 0.3, max(width.x, width.y));
 
-    // Night: deep blue-purple facades, warm street light on the lowest floors, windows glowing
-    // warm yellow and orange (offices burn more cool white), and floodlit crowns.
-    float pick = hash(cell * 1.7);
-    float cool = style == GLASS ? 0.35 : 0.1;
-    vec3 lampColor = pick < cool ? vec3(0.72, 0.87, 1.0) : pick < cool + 0.3 ? vec3(1.0, 0.6, 0.28) : vec3(1.0, 0.8, 0.42);
-    vec3 lamp = mix(vec3(1.0, 0.76, 0.42), lampColor, detail) * (0.85 + 0.3 * (1.0 - paneRise));
-    vec3 nightWall = material * vec3(0.1, 0.1, 0.17) + vec3(0.05, 0.045, 0.13);
-    nightWall += material * vec3(0.6, 0.35, 0.15) * wall * (1.0 - smoothstep(0.0, 2.5, vFacade.y));
-    vec3 nightWindow = mix(vec3(0.06, 0.08, 0.2), lamp * (0.8 + 0.2 * hash(cell + 3.1)), lit);
-    vec3 night = mix(nightWall, nightWindow, window) + vec3(0.15, 0.17, 0.35) * rim;
-    night = mix(night, base * 1.1 + vec3(0.15, 0.12, 0.05) * smoothstep(0.0, 3.0, vFacade.y - vShape.x), crown);
+    // Only the theme in view is shaded (the branch is the same for every pixel), so a frame costs
+    // one theme's work; both blend while the theme changes.
+    vec3 color = vec3(0.0);
+    float glow = 0.0;
+    if (uMixRatio < 1.0)
+    {
+        // Soft cel light: a warm key on the faces toward the sun, a cool blue-purple shade on the
+        // rest, roofs a touch brighter, darker toward the street and brighter toward the top.
+        float sunSide = smoothstep(-0.02, 0.22, dot(normal, SUN));
+        vec3 light = mix(SHADE, SUN_COLOR, sunSide) * (1.0 + 0.1 * normal.y);
+        float rise = clamp(vFacade.y / max(top, 1.0), 0.0, 1.0);
+        float gradient = mix(0.84, 1.08, rise) * mix(0.72, 1.0, smoothstep(0.0, 3.0, vFacade.y));
 
-    vec3 color = mix(day, night, uMixRatio);
-    // Lit windows and crowns shine through some of the haze at night.
-    float glow = (window * lit + crown) * uMixRatio;
+        // Glass: a deep teal tint low in each pane, the bright sky toward its top and at grazing
+        // angles, and a diagonal glint across some panes. Glass towers also brighten toward their tops.
+        vec3 sky = mix(uSky, vec3(1.0), 0.25);
+        float fresnel = pow(1.0 - max(dot(normal, toCamera), 0.0), 3.0);
+        vec3 tint = style == GLASS ? base : vec3(0.12, 0.33, 0.5);
+        float reflection = 0.1 + 0.5 * paneRise * paneRise + 0.3 * fresnel + (style == GLASS ? 0.2 * rise : 0.0);
+        float glint = glintDetail > 0.0 ? glintDetail * step(0.55, hash(cell + 7.0)) * (1.0 - smoothstep(0.05, 0.11, abs(inPane.x - inPane.y + 0.25))) : 0.0;
+        vec3 glass = mix(tint, sky, min(reflection, 0.9)) * mix(0.8, 1.0, sunSide) + 0.3 * glint;
+        vec3 day = mix(material * light, glass, window) * gradient;
+        // The rim is warm on the sunny side and cool in the shade.
+        color = mix(day, mix(vec3(0.75, 0.82, 1.0), vec3(1.0, 0.95, 0.82), sunSide), rim * 0.45);
+    }
+    if (uMixRatio > 0.0)
+    {
+        // Each window has its own on/off rhythm and lamp; far away, where a pixel spans many
+        // windows, their average takes over so nothing sparkles (and no window is worked out).
+        float occupancy = 0.2 + 0.3 * fract(vShape.w * 7.0);
+        float lit = occupancy * 0.8;
+        vec3 lamp = vec3(0.9, 0.68, 0.38);
+        if (detail > 0.0 && window > 0.0)
+        {
+            float flip = floor(uTime / 23.0 + hash(cell) * 40.0);
+            lit = mix(lit, step(1.0 - occupancy, hash(cell + flip * 0.37)), detail);
+            // Warm yellow and orange lamps; offices burn more cool white.
+            float pick = hash(cell * 1.7);
+            float cool = style == GLASS ? 0.35 : 0.1;
+            vec3 lampColor = pick < cool ? vec3(0.72, 0.87, 1.0) : pick < cool + 0.3 ? vec3(1.0, 0.6, 0.28) : vec3(1.0, 0.8, 0.42);
+            lamp = mix(lamp, lampColor * (0.85 + 0.3 * (1.0 - inPane.y)) * (0.8 + 0.2 * fract(pick * 7.3)), detail);
+        }
+        // Night: deep blue-purple facades, warm street light on the lowest floors, glowing windows
+        // and floodlit crowns.
+        vec3 nightWall = material * vec3(0.1, 0.1, 0.17) + vec3(0.05, 0.045, 0.13);
+        nightWall += material * vec3(0.6, 0.35, 0.15) * wall * (1.0 - smoothstep(0.0, 2.5, vFacade.y));
+        vec3 nightWindow = mix(vec3(0.06, 0.08, 0.2), lamp, lit);
+        vec3 night = mix(nightWall, nightWindow, window) + vec3(0.15, 0.17, 0.35) * rim;
+        night = mix(night, base * 1.1 + vec3(0.15, 0.12, 0.05) * smoothstep(0.0, 3.0, vFacade.y - vShape.x), crown);
+        color = mix(color, night, uMixRatio);
+        // Lit windows and crowns shine through some of the haze at night.
+        glow = (window * lit + crown) * uMixRatio;
+    }
     gl_FragColor = vec4(mix(color, uSky, hazeAmount(vWorld) * (1.0 - 0.5 * glow)), 1.0);
 }
