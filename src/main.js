@@ -12,6 +12,7 @@ import { createPetals, fitPetalsToCanopy, setPetalWind } from "./petals.js";
 import { setBackgroundInert } from "./modals.js";
 import { prefersReducedMotion } from "./motion.js";
 import { createPrecipitation, setPrecipitation } from "./precipitation.js";
+import { createSkyDome, paintSkyDome } from "./sky.js";
 import { createSkyline, setSkylineWeather } from "./skyline.js";
 import {
   camera,
@@ -38,6 +39,9 @@ const sky = { day: SKY_COLORS.day.clone(), night: SKY_COLORS.night.clone() };
 /** Created once the renderer exists (it needs the pixel ratio). */
 let clouds;
 let petals;
+let skyDome;
+/** The weather's gloom (0 to 1); the sky dome flattens its gradient with it. */
+let gloom = 0;
 let precipitation;
 let skyline;
 let themedMaterials = [];
@@ -62,6 +66,7 @@ function paintSky() {
   scene.background.lerpColors(sky.day, sky.night, theme.mix);
   // The city shaders work in sRGB, so they get the sky converted.
   skyline?.material.uniforms.uSky.value.copy(scene.background).convertLinearToSRGB();
+  if (skyDome) paintSkyDome(skyDome, scene.background, theme.mix, gloom);
 }
 
 /** Shows live New York weather on the island; night follows New York daylight on first load. */
@@ -70,6 +75,7 @@ function applyWeather(weather, isFirst) {
   setPrecipitation(precipitation, weather);
   if (petals) setPetalWind(petals, weather);
   if (skyline) setSkylineWeather(skyline, weather);
+  gloom = weather.gloom;
   sky.day.lerpColors(SKY_COLORS.day, GLOOM_SKY.day, weather.gloom);
   sky.night.lerpColors(SKY_COLORS.night, GLOOM_SKY.night, weather.gloom);
   paintSky();
@@ -85,6 +91,9 @@ async function boot() {
   const skylineRequest = createSkyline();
   await initScene();
   placeCamera(camera, 0);
+  await yieldToMain("sky");
+  skyDome = createSkyDome();
+  scene.add(skyDome.mesh);
   await yieldToMain("clouds");
   clouds = createClouds();
   scene.add(clouds.mesh);
@@ -112,7 +121,7 @@ async function boot() {
 
   applyWeather(await weatherRequest, true);
   setInterval(() => fetchWeather().then((weather) => applyWeather(weather, false)), WEATHER_REFRESH_MS);
-  await warmUp([...island.children, clouds.mesh, precipitation.points, petals.points, ...skyline.group.children]);
+  await warmUp([skyDome.mesh, ...island.children, clouds.mesh, precipitation.points, petals.points, ...skyline.group.children]);
   startLoop(onFrame);
   document.body.dataset.state = "ready";
 
