@@ -7,7 +7,7 @@ import { createClouds, setCloudWeather } from "./clouds.js";
 import { startDocks } from "./dock.js";
 import { placeCamera, startTour, stepTour } from "./explore.js";
 import { revealIsland, waitForEnter } from "./loading.js";
-import { islandMaterial, loadIsland } from "./island.js";
+import { canopyMaterial, islandMaterial, loadIsland } from "./island.js";
 import { createPetals, fitPetalsToCanopy, setPetalWind } from "./petals.js";
 import { setBackgroundInert } from "./modals.js";
 import { prefersReducedMotion } from "./motion.js";
@@ -49,6 +49,7 @@ function onFrame(time, delta) {
     clouds.material.uniforms.uTime.value = time;
     precipitation.material.uniforms.uTime.value = time;
     if (petals) petals.material.uniforms.uTime.value = time;
+    canopyMaterial.uniforms.uTime.value = time;
   }
   if (skyline) skyline.material.uniforms.uTime.value = time;
   if (stepTheme(delta)) {

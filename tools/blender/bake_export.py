@@ -35,7 +35,7 @@ TEXTURE_DIR = ROOT / "public" / "textures" / "island"
 
 # Atlas name -> collection that holds its objects. Atlas names are also mesh-name tokens.
 SETS = {"First": "Set_First"}
-MOBILE_MAX = 2048
+MOBILE_MAX = 1024
 
 
 def parse_args():
@@ -203,7 +203,7 @@ def bake_atlas(atlas, mode, size):
 
 
 def write_webp(png_path, atlas, mode, size):
-    """Encodes the desktop atlas and a mobile copy capped at 2048 px."""
+    """Encodes the desktop atlas and a mobile copy capped at 1024 px (phones upload it faster)."""
     out_dir = TEXTURE_DIR / mode
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = atlas.lower()
