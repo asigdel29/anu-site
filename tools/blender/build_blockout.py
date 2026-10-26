@@ -1,12 +1,12 @@
-"""Builds anu's floating island (a grass slab on brick pillars) and saves blender/island.blend.
+"""Builds anu's floating island and saves blender/island.blend.
 
 Run from the repo root:
     /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup \
         --python tools/blender/build_blockout.py
 
-The island is empty on purpose: the New York skyline around it is the scene. Units are
-metres, Z is up, and the grass top sits at z = 0. Clouds and the city are not baked:
-src/clouds.js and src/skyline.js draw them at runtime.
+The island is a grass slab on clay pillars with a cherry blossom tree and the tour props
+(props.py). Units are metres, Z is up, and the grass top sits at z = 0. Clouds and the city
+are not baked: src/clouds.js and src/skyline.js draw them at runtime.
 """
 
 import math
@@ -18,7 +18,8 @@ import bpy
 from mathutils import Vector
 
 sys.path.insert(0, str(Path(__file__).parent))
-from lib import add_box, brick_wall, linear, mesh_object, new_collection, rng, varied  # noqa: E402
+from lib import add_box, add_sphere, apply_modifiers, linear, mesh_object, new_collection, rng, strata, varied  # noqa: E402
+from props import build_props  # noqa: E402
 
 BLEND_PATH = Path(__file__).resolve().parents[2] / "blender" / "island.blend"
 
@@ -27,16 +28,18 @@ BLEND_PATH = Path(__file__).resolve().parents[2] / "blender" / "island.blend"
 
 
 def build_island(col):
-    grass = varied("Grass", "#6DB55B", "#8FD27A", scale=2.5)
-    brick = brick_wall("Brick")
+    grass = varied("Grass", "#6FCB55", "#98DE78", scale=2.5)
+    clay = strata("Clay", "#E2A867", "#F4CF94")
 
     bm = bmesh.new()
     add_box(bm, (6.1, 6.1, 0.3), center=(0, 0, -0.15), bevel=0.05)
+    # The underside rests on the pillars and is never seen.
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.normal.z < -0.9], context="FACES")
     top = mesh_object("Grass_Top", bm, col, [grass])
     top["texel_weight"] = 1.6
 
-    # Brick pillars hang under the grass in a 6x6 grid, each a different length.
-    # One mesh keeps the bake fast; the brick texture draws the rows.
+    # Clay pillars hang under the grass in a 6x6 grid, each a different length.
+    # One mesh keeps the bake fast; the strata material draws the layers.
     bm = bmesh.new()
     cell = 1.0
     for ix in range(6):
@@ -46,8 +49,79 @@ def build_island(col):
             x = -2.5 + cell * ix
             y = -2.5 + cell * iy
             add_box(bm, (cell - 0.06, cell - 0.06, depth), center=(x, y, -0.3 - depth / 2), bevel=0.05)
-    pillars = mesh_object("Brick_Pillars", bm, col, [brick])
+    # The tops sit under the grass and are never seen: they would only take atlas space.
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.normal.z > 0.9], context="FACES")
+    pillars = mesh_object("Clay_Pillars", bm, col, [clay])
     pillars["texel_weight"] = 0.5
+
+
+def fuse(obj, voxel, keep):
+    """Remeshes overlapping parts into one closed smooth surface, then thins it to about keep of
+    its triangles. The bake would otherwise light the faces buried inside other parts, and any of
+    those that show come out dark.
+    """
+    remesh = obj.modifiers.new("Remesh", "REMESH")
+    remesh.mode = "VOXEL"
+    remesh.voxel_size = voxel
+    remesh.use_smooth_shade = True
+    obj.modifiers.new("Decimate", "DECIMATE").ratio = keep
+    apply_modifiers(obj)
+
+
+def build_tree(col):
+    """The cherry blossom tree: a skin-modifier trunk and a dome of lumpy blossom clumps."""
+    bark = varied("Bark", "#8B5A3C", "#A86A42", scale=6.0)
+    blossom = varied("Blossom", "#FF7FAF", "#FFB0D0", scale=1.6)
+
+    # Skeleton: base, three stems, thin branches and surface roots. Radius per vertex.
+    points = [
+        ((0.0, 0.0, -0.3), 0.46),  # 0 base
+        ((0.0, 0.0, 0.6), 0.38),  # 1
+        ((0.08, 0.05, 1.5), 0.32),  # 2 split
+        ((-0.5, 0.2, 2.6), 0.22),  # 3 stem A
+        ((-1.4, 0.5, 3.6), 0.15),  # 4
+        ((-2.6, 0.6, 4.3), 0.08),  # 5
+        ((0.5, -0.2, 2.7), 0.22),  # 6 stem B
+        ((1.5, -0.4, 3.7), 0.14),  # 7
+        ((2.6, -0.9, 4.4), 0.08),  # 8
+        ((0.1, 0.3, 3.0), 0.2),  # 9 stem C
+        ((0.3, 0.6, 4.2), 0.13),  # 10
+        ((0.0, 1.3, 5.0), 0.07),  # 11
+        ((-1.8, 1.6, 4.2), 0.06),  # 12 twig
+        ((1.6, 0.9, 4.4), 0.06),  # 13 twig
+        ((-0.8, 0.2, 4.9), 0.06),  # 14 twig
+        ((-0.9, 0.5, 0.04), 0.11),  # 15 root
+        ((0.6, 0.85, 0.04), 0.1),  # 16 root
+        ((-0.75, -0.6, 0.04), 0.1),  # 17 root
+    ]
+    edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (2, 6), (6, 7), (7, 8), (2, 9), (9, 10), (10, 11),
+             (4, 12), (7, 13), (10, 14), (1, 15), (1, 16), (1, 17)]
+    mesh = bpy.data.meshes.new("Trunk")
+    mesh.from_pydata([p for p, _ in points], edges, [])
+    trunk = bpy.data.objects.new("Trunk", mesh)
+    col.objects.link(trunk)
+    trunk.modifiers.new("Skin", "SKIN").use_smooth_shade = True
+    for vertex, (_, radius) in zip(mesh.skin_vertices[0].data, points):
+        vertex.radius = (radius, radius)
+    trunk.modifiers.new("Subsurf", "SUBSURF").levels = 1
+    fuse(trunk, voxel=0.04, keep=0.35)
+    trunk.data.materials.append(bark)
+
+    # Canopy: lumpy opaque clumps in a wide dome, high enough that the tour camera passes under it.
+    bm = bmesh.new()
+    for _ in range(80):
+        angle = rng.uniform(0, math.tau)
+        reach = math.sqrt(rng.uniform(0, 1)) * 4.2
+        center = (math.cos(angle) * reach, math.sin(angle) * reach,
+                  4.9 + rng.uniform(-0.5, 0.8) - (reach / 4.2) ** 2 * 1.0)
+        verts = add_sphere(bm, rng.uniform(0.55, 0.95), subdivisions=3)
+        for v in verts:
+            v.co.z *= 0.85
+        bmesh.ops.translate(bm, vec=center, verts=verts)
+    canopy = mesh_object("Canopy", bm, col, [blossom])
+    fuse(canopy, voxel=0.07, keep=0.12)
+    # Light goes into vertex colours, not the atlas: its many small UV islands showed seams there.
+    canopy["vertex_bake"] = True
 
 
 def build_lighting(day_col, night_col, preview_col):
@@ -63,7 +137,8 @@ def build_lighting(day_col, night_col, preview_col):
     sun("Sun", "#FFF1DC", 3.5, 40, 98, day_col)
     sun("Moon", "#B8C4FF", 1.8, 35, 248, night_col)
 
-    for mode, color, strength in (("day", "#A9D6F2", 1.0), ("night", "#2A2658", 1.2)):
+    # A near-white day sky keeps the baked colours true; the site paints the cyan sky itself.
+    for mode, color, strength in (("day", "#D8ECFA", 1.0), ("night", "#2A2658", 1.2)):
         world = bpy.data.worlds.new(f"World_{mode}")
         world.use_fake_user = True  # the night world has no users and would be dropped on save
         world.use_nodes = True
@@ -87,11 +162,14 @@ def main():
     scene.unit_settings.system = "METRIC"
 
     set_first = new_collection("Set_First")
+    anchors = new_collection("Anchors")
     day = new_collection("Lighting_Day")
     night = new_collection("Lighting_Night")
     preview = new_collection("Preview")
 
     build_island(set_first)
+    build_tree(set_first)
+    build_props(set_first, anchors)
     build_lighting(day, night, preview)
 
     scene.world = bpy.data.worlds["World_day"]
