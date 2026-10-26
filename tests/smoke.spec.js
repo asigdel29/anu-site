@@ -1,5 +1,6 @@
-// End-to-end smoke test: the island loads, every section opens from the nav,
-// Escape closes it, and the page has no script errors, console errors or failed requests.
+// End-to-end smoke test: the island loads, the nav folds and opens on hover, every section
+// opens from the nav, Escape closes it, and the page has no script errors, console errors or
+// failed requests.
 
 import { expect, test } from "@playwright/test";
 
@@ -39,6 +40,13 @@ test("island loads and every section opens from the nav", async ({ page }) => {
 
   const nav = page.getByRole("navigation", { name: "sections" });
 
+  // The nav and the hero card fold into capsules after five seconds; hover opens them again.
+  const navDock = page.locator(".dock-nav");
+  await expect(navDock).toHaveClass(/is-collapsed/, { timeout: 8_000 });
+  await expect(page.locator(".dock-hero")).toHaveClass(/is-collapsed/);
+  await nav.hover();
+  await expect(navDock).not.toHaveClass(/is-collapsed/);
+
   await nav.getByRole("button", { name: "work" }).click();
   const work = page.getByRole("dialog", { name: "work" });
   await expect(work).toContainText("agent-canvas");
@@ -56,6 +64,8 @@ test("island loads and every section opens from the nav", async ({ page }) => {
   await about.getByRole("button", { name: "close" }).click();
   await expect(about).toBeHidden();
 
+  // The pointer left for the close button, so the nav folded again: hover it open, as a visitor would.
+  await nav.hover();
   await nav.getByRole("button", { name: "say hey" }).click();
   const contact = page.getByRole("dialog", { name: "say hey" });
   await expect(

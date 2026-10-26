@@ -4,6 +4,7 @@
 import { Color } from "three";
 
 import { createClouds, setCloudWeather } from "./clouds.js";
+import { startDocks } from "./dock.js";
 import { revealIsland, waitForEnter } from "./loading.js";
 import { islandMaterial, loadIsland } from "./island.js";
 import { setBackgroundInert } from "./modals.js";
@@ -106,6 +107,7 @@ async function boot() {
 
   await revealIsland();
   setBackgroundInert(false);
+  startDocks();
   noteWeather(await weatherRequest);
 }
 
