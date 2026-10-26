@@ -8,7 +8,7 @@ The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 
 - **The props:** a stick figure of Anu, a laptop on a crate, a stack of books and a mailbox.
 - **The city:** Manhattan at about 1:10 in a sunny stylized look, with warm brick, cream stone and teal glass. It has its street grid, Central Park, the Hudson, the East River and the boroughs beyond.
 - **Landmarks:** about 25 towers that people know New York by, from the Plaza to One World Trade Center.
-- **The park:** about 1,400 trees in green, cherry blossom pink and yellow, with the Reservoir, the Lake, the Pond and the lawns.
+- **The park:** about 1,400 stylized trees with round clustered canopies in green, cherry blossom pink and spring lime, with the Reservoir, the Lake, the Pond and the lawns. The trees sway in the wind.
 - **Day and night:** the day sky is a bright cyan and the night a deep indigo. At night, windows glow warm yellow and orange and change slowly, crowns are floodlit, streets glow and aviation lights flash.
 - **Live weather:** clouds, wind, rain, snow, fog and thunder follow New York now (data from Open-Meteo). The first visit starts in night mode after dark in New York.
 - **The scroll tour:** each scroll moves the camera one stop: in from the city to the stick figure, around the island to each prop, then out to a high view of New York. At each prop, a marker bubble opens its section. A rail on the right shows the stops.
@@ -77,6 +77,7 @@ To add a stop:
 - Each building gets brighter toward its top. Its corners have a bright rim, each roof line has a cornice, and each roof has a pale parapet.
 - Windows reflect the sky by day and glow warm by night. Copper and gold roofs have no windows.
 - The streets have asphalt roadways, sidewalks, lane dashes and crosswalks. The water has a foam line along each shore and glints in the sun.
+- Each park tree is a trunk under five round canopy lobes. The canopy is dark at its core and bright at its top. The trees sway in the wind, but not when the visitor asks for less motion.
 
 To add a landmark:
 

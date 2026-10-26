@@ -381,7 +381,7 @@ export function layoutTrees(seed = 1858) {
       const tz = z + (random() - 0.5) * 2.4;
       if (random() < 0.15 || !inPark(tx, tz, -1) || inEllipses(tx, tz, PARK_WATER, 1.5) || inEllipses(tx, tz, PARK_LAWNS)) continue;
       const roll = random();
-      const color = roll < 0.7 ? Math.floor(random() * 4) : roll < 0.92 ? 4 + Math.floor(random() * 2) : 6;
+      const color = roll < 0.76 ? Math.floor(random() * 4) : roll < 0.94 ? 4 + Math.floor(random() * 2) : 6;
       trees.push(tx, tz, 1.3 + random() * 1.1, color);
     }
   }
