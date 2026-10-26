@@ -91,7 +91,7 @@ The island lives in `blender/island.blend` (Git LFS). Two scripts rebuild the si
 ```
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python tools/blender/build_blockout.py
 /Applications/Blender.app/Contents/MacOS/Blender -b blender/island.blend \
-  --python tools/blender/bake_export.py -- --size 1024 --samples 64
+  --python tools/blender/bake_export.py -- --size 1536 --samples 64
 ```
 
 ## Licenses
