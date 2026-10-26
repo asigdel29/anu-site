@@ -16,6 +16,9 @@ import {
   PARK_WATER,
   STREET_SPACING,
   STYLE,
+  BRIDGES,
+  BRIDGE_RAMP,
+  bridgeSpan,
   CAR,
   CAR_PALETTE,
   HEADING,
@@ -185,4 +188,24 @@ test("cars drive only on roadways, never through the park or a river, and never 
       if (phases.length > 1) assert.ok(next - phase >= gap, "two cars on one lane meet");
     });
   }
+});
+
+test("each bridge spans the East River from Manhattan to Brooklyn, with nothing in its way", () => {
+  for (const bridge of BRIDGES) {
+    const { start, west, towers, east, end } = bridgeSpan(bridge);
+    assert.ok(bridge.z > MANHATTAN.taper && bridge.z < MANHATTAN.south, `${bridge.name} crosses where Manhattan narrows`);
+    assert.equal(west, manhattanHalfWidth(bridge.z), `${bridge.name} leaves from Manhattan's shore`);
+    assert.equal(east, BOROUGH_EDGE, `${bridge.name} lands on Brooklyn's shore`);
+    assert.equal(west - start, BRIDGE_RAMP);
+    assert.equal(end - east, BRIDGE_RAMP);
+    for (const tower of towers) assert.ok(tower > west + 5 && tower < east - 5, `${bridge.name} tower in the river`);
+    assert.ok(bridge.towers > bridge.deck + 3, `${bridge.name} towers rise above the deck`);
+    for (const b of buildings) {
+      const alongDeck = b.x + b.width / 2 > start && b.x - b.width / 2 < end;
+      const acrossDeck = Math.abs(b.z - bridge.z) < b.depth / 2 + bridge.width / 2;
+      assert.ok(!(alongDeck && acrossDeck), `building at ${b.x}, ${b.z} stands in the ${bridge.name} Bridge`);
+    }
+  }
+  const crossings = BRIDGES.map((bridge) => bridge.z).sort((a, b) => a - b);
+  crossings.slice(1).forEach((z, i) => assert.ok(z - crossings[i] > 15, "bridges stand apart"));
 });
