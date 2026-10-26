@@ -4,7 +4,7 @@ The personal site of Anubhav "Anu" Sigdel. A small floating island hangs over a 
 
 ## What is on the page
 
-- **The island:** a grass slab on sand-clay pillars, about 400 m above Central Park. A cherry blossom tree stands in the middle.
+- **The island:** a rounded grass top on a chunky floating rock with hanging roots, about 400 m above Central Park. A stylized cherry blossom tree stands in the middle, with grass tufts, flowers and pebbles around it. Petals fall from the tree and drift with the wind.
 - **The props:** a stick figure of Anu, a laptop on a crate, a stack of books and a mailbox.
 - **The city:** Manhattan at about 1:10 in toy-model pastels, with its street grid, Central Park, the Hudson, the East River and the boroughs beyond.
 - **Landmarks:** about 25 towers that people know New York by, from the Plaza to One World Trade Center.
@@ -91,7 +91,7 @@ The island lives in `blender/island.blend` (Git LFS). Two scripts rebuild the si
 ```
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python tools/blender/build_blockout.py
 /Applications/Blender.app/Contents/MacOS/Blender -b blender/island.blend \
-  --python tools/blender/bake_export.py -- --size 1024 --samples 64
+  --python tools/blender/bake_export.py -- --size 1536 --samples 64
 ```
 
 ## Licenses

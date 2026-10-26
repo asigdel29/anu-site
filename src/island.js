@@ -43,9 +43,12 @@ export const islandMaterial = new ShaderMaterial({
   fragmentShader,
 });
 
-/** Day/night blend of meshes baked into vertex colours (the blossom canopy); shares the theme blend. */
-const vertexColorMaterial = new ShaderMaterial({
-  uniforms: { uMixRatio: islandMaterial.uniforms.uMixRatio },
+/**
+ * Day/night blend of meshes baked into vertex colours (the blossom canopy); shares the theme
+ * blend. The frame loop sets uTime for the wind sway.
+ */
+export const canopyMaterial = new ShaderMaterial({
+  uniforms: { uMixRatio: islandMaterial.uniforms.uMixRatio, uTime: { value: 0 } },
   vertexShader: canopyVertexShader,
   fragmentShader: canopyFragmentShader,
 });
@@ -83,7 +86,7 @@ async function loadMeshPack(url) {
     geometry.boundingSphere = geometry.boundingBox.getBoundingSphere(new Sphere());
 
     // The node scale also undoes the position quantization.
-    const mesh = new Mesh(geometry, node.uvs !== undefined ? islandMaterial : vertexColorMaterial);
+    const mesh = new Mesh(geometry, node.uvs !== undefined ? islandMaterial : canopyMaterial);
     mesh.name = node.name;
     mesh.position.fromArray(node.position);
     mesh.quaternion.fromArray(node.quaternion);
@@ -119,10 +122,12 @@ export async function loadIsland({ scene, camera, renderer, yieldToMain }) {
   islandMaterial.uniforms.uDayTexture.value = textures[0];
   islandMaterial.uniforms.uNightTexture.value = textures[1];
 
+  // Each upload gets a task of its own, apart from the mesh unpacking before it.
   for (const texture of textures) {
+    await yieldToMain("texture upload");
     renderer.initTexture(texture);
-    await yieldToMain("next texture upload");
   }
+  await yieldToMain("island shaders");
 
   scene.add(island);
   await renderer.compileAsync(scene, camera);
