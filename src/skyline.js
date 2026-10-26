@@ -6,8 +6,10 @@
 import {
   AdditiveBlending,
   BoxGeometry,
+  BufferAttribute,
   BufferGeometry,
   CircleGeometry,
+  CylinderGeometry,
   Color,
   Group,
   IcosahedronGeometry,
@@ -20,6 +22,7 @@ import {
   ShaderMaterial,
   Vector4,
 } from "three";
+import { mergeGeometries, mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 
 import {
   AVENUE_ORIGIN,
@@ -38,6 +41,7 @@ import {
   TREE_PALETTE,
   buildCityArrays,
 } from "./city.js";
+import { prefersReducedMotion } from "./motion.js";
 import commonShader from "./shaders/city/common.glsl?raw";
 import buildingVertex from "./shaders/city/building.vert?raw";
 import buildingFragment from "./shaders/city/building.frag?raw";
@@ -94,9 +98,64 @@ function createBuildings(uniforms, { footprint, shape, look }) {
   return mesh;
 }
 
-/** Builds the park trees: one flat-shaded icosahedron per tree, placed in the vertex shader. */
+/** Canopy lobes of one tree in units of its crown radius: centre x, y, z and radius (a core, two sides and a top). */
+const TREE_LOBES = [
+  [0, 1.02, 0, 0.78],
+  [0.5, 0.86, 0.22, 0.58],
+  [-0.44, 0.9, -0.3, 0.58],
+  [0.05, 1.5, 0.05, 0.5],
+];
+
+/**
+ * One canopy lobe: a 20-face icosahedron with sphere normals, so it shades round, less the six
+ * faces underneath, which the tour's high cameras never see. Few triangles keep the park cheap in
+ * software WebGL.
+ */
+function lobeGeometry([x, y, z, radius]) {
+  const lobe = new IcosahedronGeometry(radius, 0).deleteAttribute("uv");
+  lobe.setAttribute("normal", lobe.getAttribute("position").clone());
+  lobe.normalizeNormals();
+  const indexed = mergeVertices(lobe);
+  const position = indexed.getAttribute("position");
+  const corners = Array.from(indexed.getIndex().array);
+  const kept = [];
+  for (let i = 0; i < corners.length; i += 3) {
+    const face = corners.slice(i, i + 3);
+    const centreY = face.reduce((sum, corner) => sum + position.getY(corner), 0) / 3;
+    if (centreY > -0.4 * radius) kept.push(...face);
+  }
+  indexed.setIndex(kept);
+  return indexed.translate(x, y, z);
+}
+
+/**
+ * One stylized tree in units of its crown radius: a tapered trunk under clustered round canopy
+ * lobes. aCanopy gives each vertex its height in the canopy (0 at the bottom, 1 at the top, -1 on
+ * the trunk) and how far out from the core it sits, so the shader can darken the core.
+ */
+function treeGeometry() {
+  const trunk = new CylinderGeometry(0.09, 0.14, 0.9, 5, 1, true).translate(0, 0.45, 0).deleteAttribute("uv");
+  const lobes = TREE_LOBES.map(lobeGeometry);
+  const geometry = mergeGeometries([trunk, ...lobes]);
+  const bottom = Math.min(...TREE_LOBES.map(([, y, , radius]) => y - radius));
+  const top = Math.max(...TREE_LOBES.map(([, y, , radius]) => y + radius));
+  const [, coreY] = TREE_LOBES[0];
+  const reach = Math.max(...TREE_LOBES.map(([x, y, z, radius]) => Math.hypot(x, y - coreY, z) + radius));
+  const trunkCount = trunk.getAttribute("position").count;
+  const position = geometry.getAttribute("position");
+  const canopy = new Float32Array(position.count * 2);
+  for (let i = 0; i < position.count; i++) {
+    const y = position.getY(i);
+    const out = Math.hypot(position.getX(i), y - coreY, position.getZ(i)) / reach;
+    canopy.set(i < trunkCount ? [-1, 0] : [(y - bottom) / (top - bottom), out], i * 2);
+  }
+  geometry.setAttribute("aCanopy", new BufferAttribute(canopy, 2));
+  return geometry;
+}
+
+/** Builds the park trees: one clustered stylized tree per record, placed and swayed in the vertex shader. */
 function createTrees(uniforms, trees) {
-  const geometry = new InstancedBufferGeometry().copy(new IcosahedronGeometry(1, 0));
+  const geometry = new InstancedBufferGeometry().copy(treeGeometry());
   geometry.setAttribute("aTree", new InstancedBufferAttribute(trees, 4));
   geometry.instanceCount = trees.length / 4;
   const material = new ShaderMaterial({
@@ -155,8 +214,8 @@ function createGround(uniforms) {
 
 /**
  * Builds the city group off the main thread. The returned material is the buildings'; its
- * uniforms (uMixRatio, uTime, uSky, uHaze) are shared with the ground, the trees and the lights,
- * so one update sets them all.
+ * uniforms (uMixRatio, uTime, uSky, uHaze, uMotion) are shared with the ground, the trees and
+ * the lights, so one update sets them all.
  */
 export async function createSkyline() {
   const uniforms = {
@@ -165,6 +224,8 @@ export async function createSkyline() {
     uSky: { value: new Color() },
     uHaze: { value: 0 },
     uGround: { value: GROUND_Y },
+    // Trees sway only when the visitor allows motion.
+    uMotion: { value: prefersReducedMotion ? 0 : 1 },
   };
   const layout = await layoutInWorker();
   const buildings = createBuildings(uniforms, layout);

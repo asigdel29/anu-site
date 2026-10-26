@@ -16,6 +16,7 @@ import {
   PARK_WATER,
   STREET_SPACING,
   STYLE,
+  TREE_PALETTE,
   inPark,
   layoutLights,
   layoutTrees,
@@ -102,4 +103,15 @@ test("the transverse roads cross the park on street lines", () => {
     const streets = (z - MANHATTAN.north) / STREET_SPACING;
     assert.ok(Math.abs(streets - Math.round(streets)) < 1e-9, `transverse at ${z} is off the street grid`);
   }
+});
+
+test("every tree has a colour, and blossom trees stay a minority", () => {
+  const trees = layoutTrees();
+  let blossoms = 0;
+  for (let i = 3; i < trees.length; i += 4) {
+    assert.ok(Number.isInteger(trees[i]) && trees[i] >= 0 && trees[i] < TREE_PALETTE.length, `colour ${trees[i]}`);
+    if (trees[i] === 4 || trees[i] === 5) blossoms++;
+  }
+  const share = blossoms / (trees.length / 4);
+  assert.ok(share > 0.08 && share < 0.3, `blossom share ${share}`);
 });
