@@ -98,14 +98,35 @@ function createBuildings(uniforms, { footprint, shape, look }) {
   return mesh;
 }
 
-/** Canopy lobes of one tree in units of its crown radius: centre x, y, z and radius (a core, three sides and a top). */
+/** Canopy lobes of one tree in units of its crown radius: centre x, y, z and radius (a core, two sides and a top). */
 const TREE_LOBES = [
-  [0, 1.05, 0, 0.72],
-  [0.5, 0.88, 0.22, 0.5],
-  [-0.42, 0.92, 0.3, 0.5],
-  [0.05, 0.92, -0.48, 0.5],
-  [0.06, 1.5, 0.02, 0.45],
+  [0, 1.02, 0, 0.78],
+  [0.5, 0.86, 0.22, 0.58],
+  [-0.44, 0.9, -0.3, 0.58],
+  [0.05, 1.5, 0.05, 0.5],
 ];
+
+/**
+ * One canopy lobe: a 20-face icosahedron with sphere normals, so it shades round, less the six
+ * faces underneath, which the tour's high cameras never see. Few triangles keep the park cheap in
+ * software WebGL.
+ */
+function lobeGeometry([x, y, z, radius]) {
+  const lobe = new IcosahedronGeometry(radius, 0).deleteAttribute("uv");
+  lobe.setAttribute("normal", lobe.getAttribute("position").clone());
+  lobe.normalizeNormals();
+  const indexed = mergeVertices(lobe);
+  const position = indexed.getAttribute("position");
+  const corners = Array.from(indexed.getIndex().array);
+  const kept = [];
+  for (let i = 0; i < corners.length; i += 3) {
+    const face = corners.slice(i, i + 3);
+    const centreY = face.reduce((sum, corner) => sum + position.getY(corner), 0) / 3;
+    if (centreY > -0.4 * radius) kept.push(...face);
+  }
+  indexed.setIndex(kept);
+  return indexed.translate(x, y, z);
+}
 
 /**
  * One stylized tree in units of its crown radius: a tapered trunk under clustered round canopy
@@ -113,14 +134,8 @@ const TREE_LOBES = [
  * the trunk) and how far out from the core it sits, so the shader can darken the core.
  */
 function treeGeometry() {
-  const trunk = new CylinderGeometry(0.09, 0.14, 0.9, 6, 1, true).translate(0, 0.45, 0).deleteAttribute("uv");
-  const lobes = TREE_LOBES.map(([x, y, z, radius]) => {
-    // A 20-face lobe with sphere normals: few triangles, but it still shades round.
-    const lobe = new IcosahedronGeometry(radius, 0).deleteAttribute("uv");
-    lobe.setAttribute("normal", lobe.getAttribute("position").clone());
-    lobe.normalizeNormals();
-    return mergeVertices(lobe.translate(x, y, z));
-  });
+  const trunk = new CylinderGeometry(0.09, 0.14, 0.9, 5, 1, true).translate(0, 0.45, 0).deleteAttribute("uv");
+  const lobes = TREE_LOBES.map(lobeGeometry);
   const geometry = mergeGeometries([trunk, ...lobes]);
   const bottom = Math.min(...TREE_LOBES.map(([, y, , radius]) => y - radius));
   const top = Math.max(...TREE_LOBES.map(([, y, , radius]) => y + radius));
